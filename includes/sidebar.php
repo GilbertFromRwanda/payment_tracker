@@ -23,6 +23,7 @@
         <?php endif; ?>
     </ul>
     <ul class="sidebar-bottom">
+        <li><a href="change_password.php">Change Password</a></li>
         <li><a href="logout.php">Logout</a></li>
     </ul>
 </aside>
