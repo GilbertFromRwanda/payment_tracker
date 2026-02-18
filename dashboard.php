@@ -38,7 +38,7 @@ $recentPayments = $stmt->fetchAll();
     <nav class="navbar">
         <div class="nav-brand">Payment Tracker</div>
         <div class="nav-user">Welcome, <?php echo $_SESSION['username']; ?></div>
-        <a href="?logout" class="logout-btn">Logout</a>
+        <a href="logout.php" class="logout-btn">Logout</a>
     </nav>
     
     <div class="container">

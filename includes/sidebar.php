@@ -6,8 +6,8 @@
         $links = [
             'dashboard.php' => 'Dashboard',
             'sectors.php' => 'Manage Sectors',
-            'customers.php' => 'Customers',
             'import_customers.php' => 'Import Customers',
+             'customers.php' => 'Customers',
             'import_payments.php' => 'Import Payments',
             'deletion.php'=>"Payment Management",
              'reports.php' => ' Reports',
@@ -21,5 +21,8 @@
             <li<?php echo !empty($extra['active']) ? ' class="active"' : ''; ?>><a href="<?php echo $extra['href']; ?>"><?php echo $extra['label']; ?></a></li>
             <?php endforeach; ?>
         <?php endif; ?>
+    </ul>
+    <ul class="sidebar-bottom">
+        <li><a href="logout.php">Logout</a></li>
     </ul>
 </aside>
