@@ -155,7 +155,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'excel') {
     echo '<tr>';
     echo '<td ' . $summaryStyle . '>Total Payments</td>';
     echo '<td ' . $summaryValueStyle . '>' . number_format($exportSummary['total_payments'] ?? 0) . '</td>';
-    echo '<td ' . $summaryStyle . '>Avg Amount/Customer</td>';
+    echo '<td ' . $summaryStyle . '>Avg Amount/Member</td>';
     echo '<td ' . $summaryValueStyle . '>RWF ' . number_format($exportSummary['avg_amount_per_customer'] ?? 0, 2) . '</td>';
     echo '<td ' . $summaryStyle . '>Collection Rate</td>';
     echo '<td ' . $summaryValueStyle . '>' . $exportCollectionRate . '%</td>';

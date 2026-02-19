@@ -884,7 +884,7 @@ $sectorParam = $sectorId ? "&sector_id=$sectorId" : '';
                        class="btn btn-primary btn-sm">
                         &#43; Add Payments
                     </a>
-                    <button onclick="exportMonthData()" class="btn btn-info btn-sm">
+                    <button onclick="exportMonthData()" class="btn btn-info btn-sm" style=" display:none">
                         &#8659; Export
                     </button>
                     <a href="reports.php?year=<?php echo $year; ?>&month=<?php echo $month; ?>"

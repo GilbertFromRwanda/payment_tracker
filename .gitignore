@@ -2,3 +2,5 @@ vendor/
 uploads/
 logs/
 config/database.php
+config.bat
+node_modules
