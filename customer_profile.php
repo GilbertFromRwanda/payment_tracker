@@ -620,8 +620,8 @@ if ($customer['first_payment_date'] && $customer['total_paid_months'] > 0) {
                 <div class="section-header">
                     <h2 class="section-title">📅 Payment History</h2>
                     <div class="section-actions">
-                        <a href="import_payments.php?customer_id=<?php echo $customerId; ?>" class="btn btn-primary btn-sm">
-                            💰 Record Payment
+                        <a href="add_payment.php?customer_id=<?php echo $customerId; ?>" class="btn btn-primary btn-sm">
+                            💰 Add Payment
                         </a>
                         <button onclick="printSection('payment-history')" class="btn btn-secondary btn-sm">
                             🖨️ Print

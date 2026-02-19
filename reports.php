@@ -86,7 +86,43 @@ if (!empty($_GET['export']) && $_GET['export'] === 'excel') {
     $exportCollectionRate = ($exportSummary['total_amount_due'] ?? 0) > 0 ?
         round((($exportSummary['total_amount_paid'] ?? 0) / $exportSummary['total_amount_due']) * 100, 1) : 0;
 
-    $filename = 'payment_report_' . date('Y-m-d');
+    // Build dynamic export title from active filters
+    $exportMonthNames = [1=>'January',2=>'February',3=>'March',4=>'April',5=>'May',6=>'June',
+                         7=>'July',8=>'August',9=>'September',10=>'October',11=>'November',12=>'December'];
+    $exportTitleParts = ['Payment Report'];
+    $exportFilenameParts = ['payment_report'];
+
+    if ($yearFilter && $monthFilter) {
+        $periodStr = ($exportMonthNames[$monthFilter] ?? $monthFilter) . ' ' . $yearFilter;
+        $exportTitleParts[] = $periodStr;
+        $exportFilenameParts[] = $yearFilter . str_pad($monthFilter, 2, '0', STR_PAD_LEFT);
+    } elseif ($yearFilter) {
+        $exportTitleParts[] = 'Year ' . $yearFilter;
+        $exportFilenameParts[] = $yearFilter;
+    }
+
+    if ($sectorId) {
+        $exportSectorStmt = $pdo->prepare("SELECT sector_name FROM sectors WHERE id = ?");
+        $exportSectorStmt->execute([$sectorId]);
+        $exportSectorRow = $exportSectorStmt->fetch();
+        if ($exportSectorRow) {
+            $exportTitleParts[] = $exportSectorRow['sector_name'];
+            $exportFilenameParts[] = preg_replace('/[^a-z0-9]+/i', '_', strtolower($exportSectorRow['sector_name']));
+        }
+    }
+
+    if (!empty($searchQuery)) {
+        $exportTitleParts[] = 'Search: "' . $searchQuery . '"';
+    }
+
+    if ($missedOnly) {
+        $exportTitleParts[] = 'Missed Payments Only';
+        $exportFilenameParts[] = 'missed';
+    }
+
+    $exportTitle = implode(' · ', $exportTitleParts) . ' — Generated ' . date('d M Y');
+    $filename = implode('_', $exportFilenameParts) . '_' . date('Y-m-d');
+
     $headers_row = ['#', 'Name', 'Phone', 'Occupation', 'Sector', 'Amount Due (RWF)',
                     'Payment Count', 'Payment Rate (%)',
                     'Missing Months', 'Missing Count', 'Last Payment'];
@@ -100,8 +136,8 @@ if (!empty($_GET['export']) && $_GET['export'] === 'excel') {
     echo '<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Payment Report</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
     echo '<body><table border="1">';
 
-    // Title row
-    echo '<tr><th colspan="' . count($headers_row) . '" style="background:#1e293b;color:#fff;font-size:14pt;padding:10px;">Payment Report — ' . date('d M Y') . '</th></tr>';
+    // Title row — reflects active filters
+    echo '<tr><th colspan="' . count($headers_row) . '" style="background:#1e293b;color:#fff;font-size:14pt;padding:10px;">' . htmlspecialchars($exportTitle) . '</th></tr>';
 
     // Summary cards row
     $summaryStyle = 'style="background:#f8fafc;padding:8px 12px;font-size:10pt;"';
@@ -634,7 +670,17 @@ $missingCustomersCount = count(array_filter($reportData, fn($c) => !empty($c['mi
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Reports - Payment Tracker</title>
+    <title><?php
+        $htmlTitleParts = ['Payment Reports'];
+        if ($yearFilter && $monthFilter) {
+            $htmlTitleParts[] = ($monthNames[$monthFilter] ?? $monthFilter) . ' ' . $yearFilter;
+        } elseif ($yearFilter) {
+            $htmlTitleParts[] = 'Year ' . $yearFilter;
+        }
+        if ($sectorId) { $sf = array_filter($sectors, fn($x)=>$x['id']==$sectorId); if ($sf) $htmlTitleParts[] = reset($sf)['sector_name']; }
+        if ($missedOnly) $htmlTitleParts[] = 'Missed Only';
+        echo htmlspecialchars(implode(' — ', $htmlTitleParts));
+    ?> - Payment Tracker</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         /* ── Page Header ── */
@@ -1121,7 +1167,13 @@ $missingCustomersCount = count(array_filter($reportData, fn($c) => !empty($c['mi
             <div class="page-header">
                 <div class="page-header-left">
                     <h1>Payment Reports</h1>
-                    <p>Period: <?php echo htmlspecialchars($periodLabel); ?><?php if ($sectorId): $s = array_filter($sectors, fn($x)=>$x['id']==$sectorId); echo ' &middot; ' . htmlspecialchars(reset($s)['sector_name'] ?? ''); endif; ?></p>
+                    <p><?php
+                        $headerMeta = ['Period: ' . htmlspecialchars($periodLabel)];
+                        if ($sectorId) { $s = array_filter($sectors, fn($x)=>$x['id']==$sectorId); if ($s) $headerMeta[] = htmlspecialchars(reset($s)['sector_name']); }
+                        if (!empty($searchQuery)) $headerMeta[] = 'Search: &ldquo;' . htmlspecialchars($searchQuery) . '&rdquo;';
+                        if ($missedOnly) $headerMeta[] = 'Missed Payments Only';
+                        echo implode(' &middot; ', $headerMeta);
+                    ?></p>
                 </div>
                 <div class="header-stats">
                     <div class="hstat">

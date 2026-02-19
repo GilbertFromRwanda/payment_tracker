@@ -132,7 +132,7 @@ $sectors = $pdo->query("SELECT * FROM sectors ORDER BY sector_name")->fetchAll()
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Import Customers - Payment Tracker</title>
+    <title>Import Members - Payment Tracker</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         /* Page header */
@@ -513,8 +513,8 @@ $sectors = $pdo->query("SELECT * FROM sectors ORDER BY sector_name")->fetchAll()
             <div class="page-header">
                 <div class="page-header-icon">📥</div>
                 <div>
-                    <h1>Import Customers</h1>
-                    <p>Upload an Excel or CSV file to bulk-import customers into a sector</p>
+                    <h1>Import Members</h1>
+                    <p>Upload an Excel or CSV file to bulk-import members into a sector</p>
                 </div>
             </div>
 
@@ -604,7 +604,7 @@ $sectors = $pdo->query("SELECT * FROM sectors ORDER BY sector_name")->fetchAll()
                             </div>
 
                             <button type="submit" class="btn-import" id="submitBtn">
-                                📥 Import Customers
+                                📥 Import Members
                             </button>
 
                         </form>

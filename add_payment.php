@@ -3,7 +3,9 @@ require_once 'includes/auth.php';
 require_once 'includes/functions.php';
 requireLogin();
 
-$customerId = isset($_GET['customer_id']) ? intval($_GET['customer_id']) : 0;
+$customerId  = isset($_GET['customer_id']) ? intval($_GET['customer_id']) : 0;
+$preMonthYear = (isset($_GET['month_year']) && preg_match('/^\d{4}-\d{2}$/', $_GET['month_year']))
+    ? $_GET['month_year'] : date('Y-m');
 
 // Fetch customer (required)
 $customer = null;
@@ -242,7 +244,7 @@ $allCustomers = $pdo->query("
                             <input type="month" id="month_year" name="month_year" required
                                    min="2020-01"
                                    max="<?php echo date('Y-m'); ?>"
-                                   value="<?php echo htmlspecialchars($_POST['month_year'] ?? date('Y-m')); ?>">
+                                   value="<?php echo htmlspecialchars($_POST['month_year'] ?? $preMonthYear); ?>">
                         </div>
 
                         <div class="form-group">

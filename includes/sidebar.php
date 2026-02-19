@@ -6,8 +6,8 @@
         $links = [
             'dashboard.php' => 'Dashboard',
             'sectors.php' => 'Manage Sectors',
-            'import_customers.php' => 'Import Customers',
-             'customers.php' => 'Customers',
+            'import_customers.php' => 'Import Members',
+             'customers.php' => 'Members',
             'import_payments.php' => 'Import Payments',
             'deletion.php'=>"Payment Management",
              'reports.php' => ' Reports',

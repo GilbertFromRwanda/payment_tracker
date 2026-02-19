@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Customer - Payment Tracker</title>
+    <title>Edit Member - Payment Tracker</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         .edit-card {
@@ -125,8 +125,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <nav class="navbar">
         <div class="nav-brand">Payment Tracker</div>
-        <div class="nav-user">Edit Customer</div>
-        <a href="customers.php" class="back-btn">Back to Customers</a>
+        <div class="nav-user">Edit Member</div>
+        <a href="customers.php" class="back-btn">Back to Members</a>
     </nav>
 
     <div class="container">
@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <main class="main-content">
             <div class="edit-card">
-                <h2>Edit Customer</h2>
+                <h2>Edit Member</h2>
 
                 <?php if (!empty($errors)): ?>
                 <div class="error-list">

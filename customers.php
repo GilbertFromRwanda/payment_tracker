@@ -384,7 +384,7 @@ $allCount = $pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customers - Payment Tracker</title>
+    <title>Members - Payment Tracker</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         /* Gradient page header */
@@ -689,13 +689,13 @@ $allCount = $pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
             <!-- Page Header -->
             <div class="page-header">
                 <div class="page-header-left">
-                    <h1>Customers</h1>
+                    <h1>Members</h1>
                     <p><?php $activeSectors = array_filter($sectors, fn($s) => $s['id'] == $sectorId); echo $sectorId ? htmlspecialchars((reset($activeSectors)['sector_name'] ?? 'Sector') . ' Sector') : 'All Sectors'; ?></p>
                 </div>
                 <div class="page-header-stats">
                     <div class="header-stat">
                         <div class="header-stat-val"><?php echo number_format($totalCustomers); ?></div>
-                        <div class="header-stat-lbl">Customers</div>
+                        <div class="header-stat-lbl">Members</div>
                     </div>
                     <div class="header-stat">
                         <div class="header-stat-val"><?php echo number_format($totalAmount / 1000, 0); ?>k</div>
