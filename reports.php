@@ -637,1195 +637,909 @@ $missingCustomersCount = count(array_filter($reportData, fn($c) => !empty($c['mi
     <title>Payment Reports - Payment Tracker</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Search and Filter Section */
-        .search-filter-section {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        /* ── Page Header ── */
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 28px 32px;
+            margin-bottom: 28px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
         }
-        
-        .search-grid {
+        .page-header-left h1 {
+            margin: 0 0 4px;
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -.5px;
+        }
+        .page-header-left p {
+            margin: 0;
+            opacity: .82;
+            font-size: .95rem;
+        }
+        .header-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .hstat {
+            background: rgba(255,255,255,.18);
+            border-radius: 10px;
+            padding: 10px 18px;
+            text-align: center;
+            min-width: 90px;
+        }
+        .hstat-val {
+            font-size: 1.3rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .hstat-lbl {
+            font-size: .72rem;
+            opacity: .85;
+            margin-top: 3px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        /* ── Filter Card ── */
+        .filter-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.07);
+            padding: 22px 24px 18px;
+            margin-bottom: 24px;
+        }
+        .filter-card .filter-title {
+            font-size: .78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            color: #9ca3af;
+            margin-bottom: 14px;
+        }
+        .filter-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
-            gap: 1rem;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+            gap: 12px;
             align-items: end;
         }
-        
-        @media (max-width: 992px) {
-            .search-grid {
-                grid-template-columns: 1fr 1fr;
-            }
+        @media(max-width:992px){ .filter-grid{ grid-template-columns: 1fr 1fr; } }
+        @media(max-width:576px){ .filter-grid{ grid-template-columns: 1fr; } }
+
+        .filter-field label {
+            display: block;
+            font-size: .78rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 5px;
         }
-        
-        @media (max-width: 576px) {
-            .search-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .search-box {
-            position: relative;
-        }
-        
-        .search-icon {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #666;
-        }
-        
-        .search-input {
+        .filter-field .fi {
             width: 100%;
-            padding: 0.75rem 1rem 0.75rem 3rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
+            padding: 9px 13px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: .9rem;
+            color: #1f2937;
+            background: #f9fafb;
+            transition: border-color .2s, box-shadow .2s;
+            box-sizing: border-box;
         }
-        
-        .search-input:focus {
+        .filter-field .fi:focus {
             outline: none;
             border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 3px rgba(102,126,234,.12);
+            background: #fff;
         }
-        
-        .search-results-info {
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            color: #666;
-        }
-        
-        .search-results-info strong {
-            color: #333;
-        }
-        
-        /* Pagination Styles */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 2rem 0;
-            gap: 0.5rem;
-        }
-        
-        .pagination-btn {
-            padding: 0.5rem 1rem;
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            color: #333;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-        
-        .pagination-btn:hover {
-            background: #e9ecef;
-        }
-        
-        .pagination-btn.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-        
-        .pagination-btn.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .search-wrap { position: relative; }
+        .search-wrap .si {
+            position: absolute;
+            left: 11px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: .95rem;
             pointer-events: none;
         }
-        
-        .pagination-info {
-            margin-left: 1rem;
-            color: #666;
-            font-size: 0.9rem;
+        .search-wrap .fi { padding-left: 34px; }
+
+        .btn-filter {
+            padding: 9px 22px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: .9rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity .15s, transform .1s;
         }
-        
-        /* Summary Cards */
-        .summary-grid {
+        .btn-filter:hover { opacity: .9; transform: translateY(-1px); }
+
+        /* Filter chips */
+        .chip-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: .8rem;
+            font-weight: 500;
+            background: #f3f4f6;
+            color: #374151;
+        }
+        .chip.active { background: #667eea; color: #fff; }
+        .chip .chip-x {
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            opacity: .7;
+        }
+        .chip .chip-x:hover { opacity: 1; }
+
+        /* ── Summary Cards ── */
+        .stats-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
         }
-        
-        .summary-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            text-align: center;
+        @media(max-width:900px){ .stats-row{ grid-template-columns: 1fr 1fr; } }
+        @media(max-width:480px){ .stats-row{ grid-template-columns: 1fr; } }
+
+        .stat-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.07);
+            padding: 20px 20px 16px;
             position: relative;
             overflow: hidden;
         }
-        
-        .summary-card::before {
+        .stat-card::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
+            top: 0; left: 0; right: 0;
             height: 4px;
+            border-radius: 12px 12px 0 0;
         }
-        
-        .summary-card.total::before { background: linear-gradient(90deg, #667eea, #764ba2); }
-        .summary-card.paid::before { background: linear-gradient(90deg, #28a745, #20c997); }
-        .summary-card.due::before { background: linear-gradient(90deg, #fd7e14, #ffc107); }
-        .summary-card.missing::before { background: linear-gradient(90deg, #dc3545, #e83e8c); }
-        
-        .summary-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin: 0.5rem 0;
+        .stat-card.sc-blue::before   { background: linear-gradient(90deg,#667eea,#764ba2); }
+        .stat-card.sc-green::before  { background: linear-gradient(90deg,#28a745,#20c997); }
+        .stat-card.sc-orange::before { background: linear-gradient(90deg,#fd7e14,#ffc107); }
+        .stat-card.sc-red::before    { background: linear-gradient(90deg,#dc3545,#e83e8c); }
+
+        .stat-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+        .sc-blue  .stat-icon { background: #ede9fe; }
+        .sc-green .stat-icon { background: #d1fae5; }
+        .sc-orange .stat-icon { background: #fff3cd; }
+        .sc-red   .stat-icon { background: #fde8ea; }
+
+        .stat-value {
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: #111827;
             line-height: 1;
+            margin-bottom: 4px;
         }
-        
-        .summary-label {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
+        .stat-label {
+            font-size: .8rem;
+            color: #6b7280;
+            font-weight: 500;
         }
-        
-        .summary-detail {
-            font-size: 0.8rem;
-            color: #888;
-            margin-top: 0.5rem;
+        .stat-sub {
+            font-size: .75rem;
+            color: #9ca3af;
+            margin-top: 6px;
         }
-        
-        .summary-change {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 12px;
+        .stat-badge {
             display: inline-block;
-            margin-top: 0.5rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: .72rem;
+            font-weight: 600;
+            margin-top: 6px;
         }
-        
-        .change-positive {
-            background: #d4edda;
-            color: #155724;
+        .badge-up   { background: #d1fae5; color: #065f46; }
+        .badge-down { background: #fde8ea; color: #991b1b; }
+        .badge-flat { background: #f3f4f6; color: #374151; }
+
+        /* ── Table Card ── */
+        .table-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.07);
+            overflow: hidden;
+            margin-bottom: 24px;
         }
-        
-        .change-negative {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        
-        .change-neutral {
-            background: #e2e3e5;
-            color: #383d41;
-        }
-        
-        /* Table Controls */
-        .table-controls {
+        .table-card-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            justify-content: space-between;
+            padding: 18px 22px 14px;
+            border-bottom: 1px solid #f3f4f6;
             flex-wrap: wrap;
-            gap: 1rem;
+            gap: 12px;
         }
-        
-        .table-actions {
+        .table-card-header h2 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #111827;
+        }
+        .table-card-header .tc-sub {
+            font-size: .8rem;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+        .tc-actions {
             display: flex;
-            gap: 0.5rem;
+            align-items: center;
+            gap: 8px;
         }
-        
-        .action-btn-small {
-            padding: 0.5rem 1rem;
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            color: #333;
-            text-decoration: none;
-            font-size: 0.875rem;
-            transition: all 0.3s;
+
+        /* Export button */
+        .btn-export {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .15s, transform .1s;
         }
-        
-        .action-btn-small:hover {
-            background: #e9ecef;
-            transform: translateY(-1px);
+        .btn-export:hover { background: #1e293b; transform: translateY(-1px); }
+
+        .export-menu {
+            position: absolute;
+            right: 0; top: calc(100% + 6px);
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.12);
+            min-width: 220px;
+            z-index: 1000;
+            padding: 6px;
+            animation: menuIn .15s ease;
         }
-        
-        /* Sortable Table Headers */
-        .sortable {
+        @keyframes menuIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+        .export-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 12px; border-radius: 7px;
+            color: #1e293b; text-decoration: none; font-size: .85rem;
+            font-weight: 500; transition: background .12s; cursor: pointer;
+        }
+        .export-item:hover { background: #f1f5f9; }
+        .export-hint { display:block; font-size:.72rem; color:#94a3b8; font-weight:400; margin-top:1px; }
+
+        .tc-select {
+            padding: 7px 10px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: .82rem;
+            color: #374151;
+            background: #f9fafb;
+            cursor: pointer;
+        }
+        .tc-select:focus { outline: none; border-color: #667eea; }
+
+        .btn-refresh {
+            padding: 7px 12px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+            color: #374151;
+            font-size: .82rem;
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .btn-refresh:hover { background: #f3f4f6; }
+
+        /* Table */
+        .rpt-table { width: 100%; border-collapse: collapse; }
+        .rpt-table thead th {
+            background: #f8fafc;
+            font-size: .75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #6b7280;
+            padding: 11px 14px;
+            text-align: left;
+            border-bottom: 1px solid #f3f4f6;
+            white-space: nowrap;
             cursor: pointer;
             user-select: none;
         }
-        
-        .sortable:hover {
-            background: #f8f9fa;
+        .rpt-table thead th:hover { background: #f1f5f9; color: #374151; }
+        .rpt-table thead th .sort-icon { margin-left: 4px; opacity: .4; }
+        .rpt-table thead th.asc  .sort-icon::after { content:'↑'; opacity:1; }
+        .rpt-table thead th.desc .sort-icon::after { content:'↓'; opacity:1; }
+
+        .rpt-table tbody tr {
+            border-bottom: 1px solid #f9fafb;
+            transition: background .1s;
         }
-        
-        .sortable .sort-icon {
-            margin-left: 0.5rem;
-            opacity: 0.5;
+        .rpt-table tbody tr:hover { background: #fafbff; }
+        .rpt-table tbody td { padding: 11px 14px; font-size: .875rem; color: #374151; vertical-align: middle; }
+
+        /* Customer cell */
+        .cust-cell { display: flex; align-items: center; gap: 10px; }
+        .cust-avatar {
+            width: 36px; height: 36px; border-radius: 9px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff; font-size: .85rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; text-transform: uppercase;
         }
-        
-        .sortable.asc .sort-icon::after {
-            content: '↑';
-        }
-        
-        .sortable.desc .sort-icon::after {
-            content: '↓';
-        }
-        
-        /* Quick Actions in Table */
-        .quick-actions {
-            display: flex;
-            gap: 0.25rem;
-        }
-        
-        .action-icon {
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            background: #f8f9fa;
-            color: #666;
+        .cust-name {
+            font-weight: 600; color: #1f2937; font-size: .875rem;
             text-decoration: none;
-            transition: all 0.2s;
         }
-        
-        .action-icon:hover {
-            background: #667eea;
-            color: white;
-        }
-        
-        /* Loading Overlay for Table */
-        .table-loading {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            display: none;
-        }
-        
-        .table-loading.active {
-            display: flex;
-        }
-        
-        /* Export Options */
-        .export-options {
-            position: relative;
-        }
-        
-        .export-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            min-width: 150px;
-            display: none;
-            z-index: 1000;
-        }
-        
-        .export-dropdown.show {
-            display: block;
-        }
-        
-        .export-option {
-            display: block;
-            padding: 0.75rem 1rem;
-            color: #333;
-            text-decoration: none;
-            border-bottom: 1px solid #f5f5f5;
-            transition: background 0.2s;
-        }
-        
-        .export-option:last-child {
-            border-bottom: none;
-        }
-        
-        .export-option:hover {
-            background: #f8f9fa;
-        }
-        
-        /* Responsive Table */
-        @media (max-width: 768px) {
-            .data-table {
-                display: block;
-                overflow-x: auto;
-                white-space: nowrap;
-            }
-            
-            .table-controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .table-actions {
-                justify-content: center;
-            }
-        }
-        
-        /* Quick Filter Chips */
-        .filter-chips {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
-        
-        .filter-chip {
-            padding: 0.5rem 1rem;
-            background: #e9ecef;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            color: #666;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .filter-chip.active {
-            background: #667eea;
-            color: white;
-        }
-        
-        .filter-chip .remove {
-            cursor: pointer;
-            font-size: 1.2rem;
-            line-height: 1;
-        }
-        
-        /* Customer Details Modal Trigger */
-        .customer-details-trigger {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        
-        .customer-details-trigger:hover {
-            text-decoration: underline;
-        }
-        /* ── Export Controls ── */
-.btn-export-main {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: #0f172a;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
-}
-.btn-export-main:hover { background: #1e293b; transform: translateY(-1px); }
-.btn-export-main:active { transform: translateY(0); }
+        .cust-name:hover { color: #667eea; text-decoration: underline; }
+        .cust-phone { font-size: .75rem; color: #9ca3af; margin-top: 1px; }
 
-.export-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-  min-width: 220px;
-  z-index: 1000;
-  padding: 6px;
-  animation: exportMenuIn 0.15s ease;
-}
-@keyframes exportMenuIn {
-  from { opacity:0; transform: translateY(-6px); }
-  to   { opacity:1; transform: translateY(0); }
-}
+        /* Payment rate bar */
+        .rate-wrap { display: flex; align-items: center; gap: 8px; }
+        .rate-bar-bg {
+            flex: 1; height: 6px; background: #f3f4f6;
+            border-radius: 3px; overflow: hidden; min-width: 60px;
+        }
+        .rate-bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+        .rate-label { font-size: .8rem; font-weight: 700; min-width: 38px; text-align: right; }
 
-.export-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 7px;
-  color: #1e293b;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.12s;
-  cursor: pointer;
-}
-.export-item:hover { background: #f1f5f9; }
-.export-item svg { flex-shrink: 0; margin-top: 2px; }
-.export-hint {
-  display: block;
-  font-size: 11px;
-  color: #94a3b8;
-  font-weight: 400;
-  margin-top: 1px;
-}
+        /* Paid months badge */
+        .paid-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 9px; border-radius: 20px;
+            font-size: .78rem; font-weight: 600;
+        }
+        .paid-badge.pb-good { background: #d1fae5; color: #065f46; }
+        .paid-badge.pb-none { background: #fde8ea; color: #991b1b; }
 
-/* Spinner */
-.export-spinner {
-  width: 40px; height: 40px;
-  border: 4px solid #e2e8f0;
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  margin: 0 auto;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+        /* Missing months tags */
+        .miss-tags { display: flex; flex-wrap: wrap; gap: 4px; max-width: 180px; }
+        .miss-tag {
+            padding: 2px 7px; border-radius: 5px;
+            background: #fff1f2; color: #be123c;
+            font-size: .72rem; font-weight: 600;
+        }
+        .miss-more {
+            padding: 2px 7px; border-radius: 5px;
+            background: #fef3c7; color: #92400e;
+            font-size: .72rem; font-weight: 600;
+        }
+        .all-paid { color: #059669; font-weight: 600; font-size: .82rem; }
 
-/* ── Print Styles ── */
-@media print {
-  /* Hide everything but the report */
-  header, nav, .sidebar, .filters-panel, .export-controls,
-  .pagination, .btn-export-main, #exportMenu, .search-bar,
-  .action-col, .no-print { display: none !important; }
+        /* Last payment */
+        .lp-date { font-size: .82rem; color: #374151; }
+        .lp-never { color: #dc3545; font-weight: 600; font-size: .82rem; }
 
-  body { background: #fff !important; font-size: 12px; }
+        /* Action icon */
+        .act-view {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; border-radius: 7px;
+            background: #ede9fe; color: #5b21b6;
+            font-size: .82rem; text-decoration: none;
+            transition: background .15s, transform .1s;
+        }
+        .act-view:hover { background: #667eea; color: #fff; transform: scale(1.1); }
 
-  .print-header { display: block !important; }
+        /* Empty state */
+        .empty-state {
+            text-align: center; padding: 56px 24px; color: #9ca3af;
+        }
+        .empty-state .es-icon { font-size: 2.8rem; margin-bottom: 12px; }
+        .empty-state .es-title { font-size: 1rem; font-weight: 600; color: #374151; margin-bottom: 4px; }
+        .empty-state .es-sub { font-size: .85rem; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th { background: #1e293b !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  th, td { border: 1px solid #cbd5e1; padding: 6px 8px; }
-  tr:nth-child(even) td { background: #f8fafc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        /* ── Pagination ── */
+        .pagination {
+            display: flex; align-items: center; justify-content: center;
+            gap: 6px; margin: 8px 0 4px; flex-wrap: wrap;
+        }
+        .pg-btn {
+            padding: 6px 12px; border-radius: 7px;
+            background: #f9fafb; border: 1.5px solid #e5e7eb;
+            color: #374151; text-decoration: none; font-size: .82rem; font-weight: 500;
+            transition: all .15s;
+        }
+        .pg-btn:hover:not(.disabled):not(.active) { background: #f3f4f6; border-color: #d1d5db; }
+        .pg-btn.active { background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; border-color:transparent; }
+        .pg-btn.disabled { opacity: .4; pointer-events: none; }
+        .pg-info { font-size: .8rem; color: #9ca3af; margin-left: 4px; }
 
-  /* Force table to show all rows (not just current page) */
-  .table-container { overflow: visible !important; }
+        /* Export spinner */
+        .export-spinner {
+            width:40px; height:40px; border:4px solid #e2e8f0;
+            border-top-color:#667eea; border-radius:50%;
+            animation: spin .7s linear infinite; margin: 0 auto;
+        }
+        @keyframes spin { to{ transform:rotate(360deg); } }
 
-  a[href]:after { content: none !important; }
-  @page { margin: 1.5cm; size: A4 landscape; }
-}
-
-/* Hidden by default, shown only during print */
-.print-header { display: none; }
+        /* Print styles */
+        @media print {
+            header, nav, .sidebar, .filter-card, .page-header,
+            .tc-actions, .pagination, .act-view, .no-print { display:none !important; }
+            body { background:#fff !important; font-size:12px; }
+            .print-header { display:block !important; }
+            .rpt-table { width:100%; border-collapse:collapse; font-size:11px; }
+            .rpt-table thead th { background:#1e293b !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+            .rpt-table th, .rpt-table td { border:1px solid #cbd5e1; padding:6px 8px; }
+            @page { margin:1.5cm; size:A4 landscape; }
+        }
+        .print-header { display: none; }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-brand">Payment Tracker</div>
-        <div class="nav-user">Welcome, <?php echo $_SESSION['username']; ?></div>
-        <a href="dashboard.php" class="back-btn">Back to Dashboard</a>
+        <div class="nav-user">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></div>
+        <a href="#" onclick="history.go(-1); return false;" class="back-btn">← Back</a>
     </nav>
-    
+
     <div class="container">
         <?php include 'includes/sidebar.php'; ?>
-        
+
         <main class="main-content">
-            <h1>Payment Reports & Tracking</h1>
-            
-            <!-- Search and Filter Section -->
-            <div class="search-filter-section">
+
+            <?php
+            $collectionRate = ($summaryStats['total_amount_due'] ?? 0) > 0
+                ? round((($summaryStats['total_amount_paid'] ?? 0) / $summaryStats['total_amount_due']) * 100, 1)
+                : 0;
+            $monthNames = [
+                1=>'January',2=>'February',3=>'March',4=>'April',
+                5=>'May',6=>'June',7=>'July',8=>'August',
+                9=>'September',10=>'October',11=>'November',12=>'December'
+            ];
+            $periodLabel = $yearFilter
+                ? ($monthFilter ? ($monthNames[$monthFilter] ?? $monthFilter) . ' ' . $yearFilter : 'Year ' . $yearFilter)
+                : 'All Time';
+            ?>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="page-header-left">
+                    <h1>Payment Reports</h1>
+                    <p>Period: <?php echo htmlspecialchars($periodLabel); ?><?php if ($sectorId): $s = array_filter($sectors, fn($x)=>$x['id']==$sectorId); echo ' &middot; ' . htmlspecialchars(reset($s)['sector_name'] ?? ''); endif; ?></p>
+                </div>
+                <div class="header-stats">
+                    <div class="hstat">
+                        <div class="hstat-val"><?php echo number_format($summaryStats['total_customers'] ?? 0); ?></div>
+                        <div class="hstat-lbl">Customers</div>
+                    </div>
+                    <div class="hstat">
+                        <div class="hstat-val"><?php echo $collectionRate; ?>%</div>
+                        <div class="hstat-lbl">Collection</div>
+                    </div>
+                    <div class="hstat">
+                        <div class="hstat-val"><?php
+                            $paid = $summaryStats['total_amount_paid'] ?? 0;
+                            echo $paid >= 1000000 ? number_format($paid/1000000, 1).'M' : ($paid >= 1000 ? number_format($paid/1000, 0).'K' : number_format($paid));
+                        ?></div>
+                        <div class="hstat-lbl">Collected RWF</div>
+                    </div>
+                    <div class="hstat">
+                        <div class="hstat-val"><?php echo number_format($summaryStats['customers_without_payments'] ?? 0); ?></div>
+                        <div class="hstat-lbl">Not Paid</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Card -->
+            <div class="filter-card">
+                <div class="filter-title">Filter Report</div>
                 <form method="GET" id="searchForm">
-                    <div class="search-grid">
-                        <!-- Search Input -->
-                        <div class="form-group search-box">
-                            <label for="search">Search Customers</label>
-                            <div class="search-icon"></div>
-                            <input type="text" 
-                                   id="search" 
-                                   name="search" 
-                                   class="search-input" 
-                                   placeholder="Search by name, phone, or occupation..." 
-                                   value="<?php echo htmlspecialchars($searchQuery); ?>"
-                                   autocomplete="off">
-                            <div class="search-results-info">
-                                Found <strong><?php echo $totalCustomers; ?></strong> customers 
-                                <?php if (!empty($searchQuery)): ?>
-                                matching "<strong><?php echo htmlspecialchars($searchQuery); ?></strong>"
-                                <?php endif; ?>
+                    <div class="filter-grid">
+                        <div class="filter-field">
+                            <label for="search">Search</label>
+                            <div class="search-wrap">
+                                <span class="si">&#128269;</span>
+                                <input type="text" id="search" name="search" class="fi"
+                                    placeholder="Name, phone, occupation…"
+                                    value="<?php echo htmlspecialchars($searchQuery); ?>"
+                                    autocomplete="off">
                             </div>
                         </div>
-                        
-                        <!-- Sector Filter -->
-                        <div class="form-group">
+                        <div class="filter-field">
                             <label for="sector_id">Sector</label>
-                            <select id="sector_id" name="sector_id" class="form-control">
+                            <select id="sector_id" name="sector_id" class="fi">
                                 <option value="">All Sectors</option>
-                                <?php foreach ($sectors as $sector): ?>
-                                <option value="<?php echo $sector['id']; ?>" 
-                                    <?php echo $sectorId == $sector['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($sector['sector_name']); ?>
+                                <?php foreach ($sectors as $s): ?>
+                                <option value="<?php echo $s['id']; ?>" <?php echo $sectorId==$s['id']?'selected':''; ?>>
+                                    <?php echo htmlspecialchars($s['sector_name']); ?>
                                 </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        
-                        <!-- Year Filter -->
-                        <div class="form-group">
+                        <div class="filter-field">
                             <label for="year">Year</label>
-                            <select id="year" name="year" class="form-control">
-                                <?php for ($y = date('Y'); $y >= 2020; $y--): ?>
-                                <option value="<?php echo $y; ?>"
-                                    <?php echo $yearFilter == $y ? 'selected' : ''; ?>>
-                                    <?php echo $y; ?>
-                                </option>
+                            <select id="year" name="year" class="fi">
+                                <?php for ($y=date('Y'); $y>=2020; $y--): ?>
+                                <option value="<?php echo $y; ?>" <?php echo $yearFilter==$y?'selected':''; ?>><?php echo $y; ?></option>
                                 <?php endfor; ?>
                             </select>
                         </div>
-
-                        <!-- Month Filter -->
-                        <div class="form-group">
+                        <div class="filter-field">
                             <label for="month">Month</label>
-                            <select id="month" name="month" class="form-control">
+                            <select id="month" name="month" class="fi">
                                 <option value="">All Months</option>
-                                <?php
-                                $monthNames = [
-                                    1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
-                                    5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
-                                    9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
-                                ];
-                                foreach ($monthNames as $num => $name): ?>
-                                <option value="<?php echo $num; ?>"
-                                    <?php echo $monthFilter == $num ? 'selected' : ''; ?>>
-                                    <?php echo $name; ?>
-                                </option>
+                                <?php foreach ($monthNames as $num => $name): ?>
+                                <option value="<?php echo $num; ?>" <?php echo $monthFilter==$num?'selected':''; ?>><?php echo $name; ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-
-                        <!-- Payment Status Filter -->
-                        <div class="form-group">
-                            <label for="missed_only">Payment Status</label>
-                            <select id="missed_only" name="missed_only" class="form-control">
+                        <div class="filter-field">
+                            <label for="missed_only">Status</label>
+                            <select id="missed_only" name="missed_only" class="fi">
                                 <option value="">All Customers</option>
-                                <option value="1" <?php echo $missedOnly ? 'selected' : ''; ?>>Missed Payments Only</option>
+                                <option value="1" <?php echo $missedOnly?'selected':''; ?>>Missed Only</option>
                             </select>
                         </div>
-
-                        <!-- Action Buttons -->
-                        <div class="form-group">
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                                <span class="btn-icon">🔍</span> Search
-                            </button>
-                            <a href="reports.php" class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;">
-                                <span class="btn-icon">🔄</span> Reset
-                            </a>
+                        <div class="filter-field">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="btn-filter">Search</button>
                         </div>
                     </div>
-                    
-                    <!-- Hidden fields for pagination -->
                     <input type="hidden" name="page" id="pageInput" value="<?php echo $page; ?>">
                 </form>
-                
-                <!-- Active Filters Display -->
-                <?php if ($sectorId || !empty($searchQuery) || $yearFilter || $monthFilter || $missedOnly): ?>
-                <div class="filter-chips">
+
+                <!-- Active filter chips -->
+                <?php if ($sectorId || !empty($searchQuery) || $monthFilter || $missedOnly): ?>
+                <div class="chip-row">
                     <?php if (!empty($searchQuery)): ?>
-                    <div class="filter-chip">
-                        Search: <?php echo htmlspecialchars($searchQuery); ?>
-                        <span class="remove" onclick="removeFilter('search')">×</span>
-                    </div>
+                    <span class="chip">Search: <?php echo htmlspecialchars($searchQuery); ?> <span class="chip-x" onclick="removeFilter('search')">×</span></span>
                     <?php endif; ?>
-
-                    <?php if ($sectorId):
-                        $selectedSector = array_filter($sectors, fn($s) => $s['id'] == $sectorId);
-                        if (!empty($selectedSector)): ?>
-                    <div class="filter-chip">
-                        Sector: <?php echo htmlspecialchars(reset($selectedSector)['sector_name']); ?>
-                        <span class="remove" onclick="removeFilter('sector_id')">×</span>
-                    </div>
+                    <?php if ($sectorId): $sf=array_filter($sectors,fn($x)=>$x['id']==$sectorId); if($sf): ?>
+                    <span class="chip">Sector: <?php echo htmlspecialchars(reset($sf)['sector_name']); ?> <span class="chip-x" onclick="removeFilter('sector_id')">×</span></span>
                     <?php endif; endif; ?>
-
-                    <div class="filter-chip">
-                        Year: <?php echo htmlspecialchars($yearFilter); ?>
-                    </div>
-
-                    <?php if ($monthFilter): ?>
-                    <div class="filter-chip">
-                        Month: <?php echo $monthNames[$monthFilter] ?? $monthFilter; ?>
-                        <span class="remove" onclick="removeFilter('month')">×</span>
-                    </div>
+                    <?php if ($yearFilter): ?>
+                    <span class="chip">Year: <?php echo htmlspecialchars($yearFilter); ?></span>
                     <?php endif; ?>
-
+                    <?php if ($monthFilter): ?>
+                    <span class="chip">Month: <?php echo $monthNames[$monthFilter]??$monthFilter; ?> <span class="chip-x" onclick="removeFilter('month')">×</span></span>
+                    <?php endif; ?>
                     <?php if ($missedOnly): ?>
-                    <div class="filter-chip active">
-                        Missed Payments Only
-                        <span class="remove" onclick="removeFilter('missed_only')">×</span>
-                    </div>
+                    <span class="chip active">Missed Only <span class="chip-x" onclick="removeFilter('missed_only')">×</span></span>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>
             </div>
-            
-            <!-- Quick Stats Summary -->
-            <div class="summary-grid">
-                <div class="summary-card total">
-                    <div class="summary-label">Customers Found</div>
-                    <div class="summary-value"><?php echo $totalCustomers; ?></div>
-                    <div class="summary-detail">
-                        Page <?php echo $page; ?> of <?php echo $totalPages; ?>
-                    </div>
+
+            <!-- Summary Stat Cards -->
+            <div class="stats-row">
+                <div class="stat-card sc-blue">
+                    <div class="stat-icon">&#128101;</div>
+                    <div class="stat-value"><?php echo number_format($totalCustomers); ?></div>
+                    <div class="stat-label">Customers Found</div>
+                    <div class="stat-sub">Page <?php echo $page; ?> of <?php echo $totalPages ?: 1; ?></div>
                 </div>
-                
-                <div class="summary-card due">
-                    <div class="summary-label">Total Amount Due</div>
-                    <div class="summary-value">RWF <?php echo number_format($summaryStats['total_amount_due'] ?? 0, 2); ?></div>
-                    <div class="summary-detail">
-                        Avg: RWF <?php echo number_format($summaryStats['avg_amount_per_customer'] ?? 0, 2); ?>
-                    </div>
+                <div class="stat-card sc-orange">
+                    <div class="stat-icon">&#128176;</div>
+                    <div class="stat-value" style="font-size:1.15rem;">RWF <?php
+                        $due = $summaryStats['total_amount_due'] ?? 0;
+                        echo $due >= 1000000 ? number_format($due/1000000, 2).'M' : number_format($due);
+                    ?></div>
+                    <div class="stat-label">Total Amount Due</div>
+                    <div class="stat-sub">Avg RWF <?php echo number_format($summaryStats['avg_amount_per_customer'] ?? 0); ?>/customer</div>
                 </div>
-                
-                <div class="summary-card paid">
-                    <div class="summary-label">Total Collected</div>
-                    <div class="summary-value">RWF <?php echo number_format($summaryStats['total_amount_paid'] ?? 0, 2); ?></div>
-                    <div class="summary-detail">
-                        <?php echo $summaryStats['total_payments'] ?? 0; ?> payments
-                    </div>
+                <div class="stat-card sc-green">
+                    <div class="stat-icon">&#9989;</div>
+                    <div class="stat-value" style="font-size:1.15rem;">RWF <?php
+                        $coll = $summaryStats['total_amount_paid'] ?? 0;
+                        echo $coll >= 1000000 ? number_format($coll/1000000, 2).'M' : number_format($coll);
+                    ?></div>
+                    <div class="stat-label">Total Collected</div>
+                    <div class="stat-sub"><?php echo number_format($summaryStats['total_payments'] ?? 0); ?> payment records</div>
+                    <?php
+                    $revDir = $revenueChange > 0 ? 'up' : ($revenueChange < 0 ? 'down' : 'flat');
+                    $revIcon = $revenueChange > 0 ? '▲' : ($revenueChange < 0 ? '▼' : '—');
+                    ?>
+                    <span class="stat-badge badge-<?php echo $revDir; ?>"><?php echo $revIcon; ?> <?php echo abs($revenueChange); ?>% vs last month</span>
                 </div>
-                
-                <div class="summary-card missing">
-                    <div class="summary-label">Collection Rate</div>
-                    <div class="summary-value">
-                        <?php 
-                        $collectionRate = ($summaryStats['total_amount_due'] ?? 0) > 0 ? 
-                            number_format((($summaryStats['total_amount_paid'] ?? 0) / ($summaryStats['total_amount_due'] ?? 0)) * 100, 1) : 0;
-                        echo $collectionRate; ?>%
-                    </div>
-                    <div class="summary-detail">
-                        <?php echo $summaryStats['customers_without_payments'] ?? 0; ?> without payments
-                    </div>
+                <div class="stat-card sc-red">
+                    <div class="stat-icon">&#128200;</div>
+                    <div class="stat-value"><?php echo $collectionRate; ?>%</div>
+                    <div class="stat-label">Collection Rate</div>
+                    <div class="stat-sub"><?php echo number_format($summaryStats['customers_without_payments'] ?? 0); ?> customers without payment</div>
+                    <?php
+                    $custDir = $customerChange > 0 ? 'up' : ($customerChange < 0 ? 'down' : 'flat');
+                    $custIcon = $customerChange > 0 ? '▲' : ($customerChange < 0 ? '▼' : '—');
+                    ?>
+                    <span class="stat-badge badge-<?php echo $custDir; ?>"><?php echo $custIcon; ?> <?php echo abs($customerChange); ?>% paying customers</span>
                 </div>
             </div>
-            
-            <!-- Table Controls -->
-            <div class="table-controls">
-                <div>
-                    <h2>Customer Payment Details</h2>
-                    <div style="color: #666; font-size: 0.9rem;">
-                        Showing <?php echo min($limit, count($reportData)); ?> of <?php echo $totalCustomers; ?> customers
+
+            <!-- Table Card -->
+            <div class="table-card">
+                <div class="table-card-header">
+                    <div>
+                        <h2>Customer Payment Details</h2>
+                        <div class="tc-sub">Showing <?php echo min($limit, count($reportData)); ?> of <?php echo $totalCustomers; ?> customers</div>
                     </div>
-                </div>
-                
-                <div class="table-actions">
-                    <!-- Export / Print Controls -->
-<div class="export-controls" style="position:relative; display:inline-block;">
-  <button class="btn-export-main" id="exportToggle" onclick="toggleExportMenu(event)">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    Export / Print
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:4px"><polyline points="6 9 12 15 18 9"/></svg>
-  </button>
-
-  <div class="export-menu" id="exportMenu" style="display:none;">
-    <!-- <a class="export-item" href="#" onclick="exportData('csv')">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      Export as CSV
-      <span class="export-hint">Spreadsheet compatible</span>
-    </a> -->
-    <a class="export-item" href="#" onclick="exportData('excel')">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#1D6F42"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
-      Export report
-      <span class="export-hint">Full formatting (.xlsx)</span>
-    </a>
-    <!-- <hr style="margin:4px 0; border-color:#e5e7eb;">
-    <a class="export-item" href="#" onclick="printReport()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      Print Report
-      <span class="export-hint">Print-optimized layout</span>
-    </a> -->
-  </div>
-</div>
-
-<!-- Export loading overlay -->
-<div id="exportOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:12px;">
-  <div style="background:#fff; border-radius:12px; padding:32px 48px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-    <div class="export-spinner"></div>
-    <div style="margin-top:16px; font-weight:600; color:#1e293b;" id="exportOverlayMsg">Preparing export…</div>
-    <div style="font-size:12px; color:#64748b; margin-top:4px;">This may take a moment for large datasets</div>
-  </div>
-</div>
-                    <!-- <div class="export-options">
-                        <button class="action-btn-small" onclick="toggleExportDropdown()">
-                            <span class="btn-icon">📥</span> Export
-                        </button>
-                        <div class="export-dropdown" id="exportDropdown">
-                            <a href="#" class="export-option" onclick="exportToCSV()">Export to CSV</a>
-                            <a href="#" class="export-option" onclick="exportToExcel()">Export to Excel</a>
-                            <a href="#" class="export-option" onclick="printReport()">Print Report</a>
-                        </div>
-                    </div> -->
-                    
-                    <button class="action-btn-small" onclick="refreshTable()">
-                        <span class="btn-icon">🔄</span> Refresh
-                    </button>
-                     
-                    
-                    <select class="action-btn-small" onchange="changePageSize(this.value)" style="padding: 0.5rem;">
-                        <option value="25" <?php echo $limit == 25 ? 'selected' : ''; ?>>25 per page</option>
-                        <option value="50" <?php echo $limit == 50 ? 'selected' : ''; ?>>50 per page</option>
-                        <option value="100" <?php echo $limit == 100 ? 'selected' : ''; ?>>100 per page</option>
-                        <option value="200" <?php echo $limit == 200 ? 'selected' : ''; ?>>200 per page</option>
-                    </select>
-                </div>
-            </div>
-            
-            <!-- Detailed Report Table -->
-            <div class="report-table" style="position: relative;">
-                <div class="table-loading" id="tableLoading">
-                    <div class="loading-spinner" style="width: 40px; height: 40px;"></div>
-                </div>
-                
-                <table class="data-table" id="customerTable">
-                    <thead>
-                        <tr>
-                            <th class="sortable" onclick="sortTable(0)"># <span class="sort-icon"></span></th>
-                            <th class="sortable" onclick="sortTable(1)">Name <span class="sort-icon"></span></th>
-                            <th class="sortable" onclick="sortTable(2)">Phone <span class="sort-icon"></span></th>
-                            <th>Occupation</th>
-                            <th class="sortable" onclick="sortTable(4)">Amount Due <span class="sort-icon"></span></th>
-                            <th>Sector</th>
-                            <th class="sortable" onclick="sortTable(6)">Paid Months <span class="sort-icon"></span></th>
-                            <th class="sortable" onclick="sortTable(7)">Payment Rate <span class="sort-icon"></span></th>
-                            <th>Missing Months</th>
-                            <th class="sortable" onclick="sortTable(9)">Last Payment <span class="sort-icon"></span></th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php 
-                        $i=1;
-                        foreach ($reportData as $customer): ?>
-                        <tr>
-                            <td><?php echo $i++; ?></td>
-                            <td>
-                                <a href="#" class="customer-details-trigger" 
-                                   onclick="showCustomerDetails(<?php echo $customer['customer_id']; ?>)">
-                                    <strong><?php echo htmlspecialchars($customer['name']); ?></strong>
+                    <div class="tc-actions">
+                        <!-- Export button -->
+                        <div style="position:relative; display:inline-block;">
+                            <button class="btn-export" id="exportToggle" onclick="toggleExportMenu(event)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Export
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                            <div class="export-menu" id="exportMenu" style="display:none;">
+                                <a class="export-item" href="#" onclick="exportData('excel'); return false;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D6F42" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+                                    Export to Excel
+                                    <span class="export-hint">Full report (.xlsx)</span>
                                 </a>
+                            </div>
+                        </div>
+                        <button class="btn-refresh" onclick="refreshTable()">&#8635; Refresh</button>
+                        <select class="tc-select" onchange="changePageSize(this.value)">
+                            <option value="25" <?php echo $limit==25?'selected':''; ?>>25 / page</option>
+                            <option value="50" <?php echo $limit==50?'selected':''; ?>>50 / page</option>
+                            <option value="100" <?php echo $limit==100?'selected':''; ?>>100 / page</option>
+                            <option value="200" <?php echo $limit==200?'selected':''; ?>>200 / page</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="rpt-table" id="customerTable">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)"># <span class="sort-icon"></span></th>
+                                <th onclick="sortTable(1)">Customer <span class="sort-icon"></span></th>
+                                <th onclick="sortTable(2)">Occupation <span class="sort-icon"></span></th>
+                                <th onclick="sortTable(3)">Sector <span class="sort-icon"></span></th>
+                                <th onclick="sortTable(4)">Amount Due <span class="sort-icon"></span></th>
+                                <th onclick="sortTable(5)">Paid Months <span class="sort-icon"></span></th>
+                                <th onclick="sortTable(6)">Payment Rate <span class="sort-icon"></span></th>
+                                <th>Missing Months</th>
+                                <th onclick="sortTable(8)">Last Payment <span class="sort-icon"></span></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php $i=1; foreach ($reportData as $customer):
+                            $rate = floatval($customer['payment_rate']);
+                            $rateColor = $rate >= 80 ? '#10b981' : ($rate >= 50 ? '#f59e0b' : '#ef4444');
+                            $initials = strtoupper(substr($customer['name'], 0, 1));
+                        ?>
+                        <tr>
+                            <td style="color:#9ca3af; font-size:.8rem;"><?php echo $i++; ?></td>
+                            <td>
+                                <div class="cust-cell">
+                                    <div class="cust-avatar"><?php echo htmlspecialchars($initials); ?></div>
+                                    <div>
+                                        <a href="customer_profile.php?id=<?php echo $customer['customer_id']; ?>" class="cust-name">
+                                            <?php echo htmlspecialchars($customer['name']); ?>
+                                        </a>
+                                        <div class="cust-phone"><?php echo htmlspecialchars($customer['phone']); ?></div>
+                                    </div>
+                                </div>
                             </td>
-                            <td><?php echo htmlspecialchars($customer['phone']); ?></td>
-                            <td><?php echo htmlspecialchars($customer['occupation']); ?></td>
-                            <td><strong>RWF <?php echo number_format($customer['amount_to_pay'], 2); ?></strong></td>
-                            <td><?php echo htmlspecialchars($customer['sector_name']); ?></td>
+                            <td style="color:#6b7280; font-size:.82rem;"><?php echo htmlspecialchars($customer['occupation']); ?></td>
+                            <td style="font-size:.82rem;"><?php echo htmlspecialchars($customer['sector_name']); ?></td>
+                            <td><strong style="color:#1f2937;">RWF <?php echo number_format($customer['amount_to_pay']); ?></strong></td>
                             <td>
                                 <?php if ($customer['paid_count'] > 0): ?>
-                                <span style="color: #28a745; font-weight: 500;">
-                                    <?php echo $customer['paid_count']; ?> months
-                                </span>
+                                <span class="paid-badge pb-good"><?php echo $customer['paid_count']; ?> mo</span>
                                 <?php else: ?>
-                                <span style="color: #dc3545;">None</span>
+                                <span class="paid-badge pb-none">None</span>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <div style="flex: 1; height: 6px; background: #e9ecef; border-radius: 3px;">
-                                        <div style="width: <?php echo $customer['payment_rate']; ?>%; height: 100%; 
-                                                    background: <?php echo $customer['payment_rate'] >= 80 ? '#28a745' : ($customer['payment_rate'] >= 50 ? '#ffc107' : '#dc3545'); ?>; border-radius: 3px;">
-                                        </div>
+                                <div class="rate-wrap">
+                                    <div class="rate-bar-bg">
+                                        <div class="rate-bar-fill" style="width:<?php echo $rate; ?>%; background:<?php echo $rateColor; ?>;"></div>
                                     </div>
-                                    <span style="font-weight: 500; min-width: 40px;">
-                                        <?php echo $customer['payment_rate']; ?>%
-                                    </span>
+                                    <span class="rate-label" style="color:<?php echo $rateColor; ?>;"><?php echo $rate; ?>%</span>
                                 </div>
                             </td>
                             <td>
                                 <?php if (!empty($customer['missing_months'])): ?>
-                                <div class="missing-months" style="max-width: 200px; font-size: 0.875rem;">
-                                    <?php 
-                                    $recentMissing = array_slice($customer['missing_months'], -3);
-                                    echo implode(', ', $recentMissing);
-                                    if (count($customer['missing_months']) > 3) {
-                                        echo '... (' . count($customer['missing_months']) . ')';
-                                    }
+                                <div class="miss-tags">
+                                    <?php
+                                    $show = array_slice($customer['missing_months'], -3);
+                                    foreach ($show as $mm):
+                                        $parts = explode('-', $mm);
+                                        $label = isset($parts[1]) ? date('M', mktime(0,0,0,intval($parts[1]),1)).' '.$parts[0] : $mm;
                                     ?>
+                                    <span class="miss-tag"><?php echo $label; ?></span>
+                                    <?php endforeach;
+                                    if (count($customer['missing_months']) > 3): ?>
+                                    <span class="miss-more">+<?php echo count($customer['missing_months'])-3; ?></span>
+                                    <?php endif; ?>
                                 </div>
                                 <?php else: ?>
-                                <span style="color: #28a745; font-weight: 500;">✅ All paid</span>
+                                <span class="all-paid">&#10003; All paid</span>
                                 <?php endif; ?>
                             </td>
                             <td>
                                 <?php if ($customer['last_payment']): ?>
-                                <?php echo date('M d, Y', strtotime($customer['last_payment'])); ?>
+                                <span class="lp-date"><?php echo date('d M Y', strtotime($customer['last_payment'])); ?></span>
                                 <?php else: ?>
-                                <span style="color: #dc3545;">Never</span>
+                                <span class="lp-never">Never</span>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div class="quick-actions">
-                                    <a href="customer_profile.php?customer_id=<?php echo $customer['customer_id']; ?>" 
-                                       class="action-icon" title="View Details">👁️</a>
-                                    <!-- <a href="#" class="action-icon" title="Send Reminder" 
-                                       onclick="sendReminder(<?php echo $customer['customer_id']; ?>)">📧</a> -->
-                                    <!-- <a href="#" class="action-icon" title="Add Payment"
-                                       onclick="addPayment(<?php echo $customer['customer_id']; ?>)">💰</a> -->
-                                </div>
+                                <a href="customer_profile.php?id=<?php echo $customer['customer_id']; ?>" class="act-view" title="View Profile">&#128065;</a>
                             </td>
                         </tr>
                         <?php endforeach; ?>
                         <?php if (empty($reportData)): ?>
                         <tr>
-                            <td colspan="11" style="text-align: center; padding: 3rem; color: #666;">
-                                <div style="font-size: 1.5rem; margin-bottom: 1rem;">📭</div>
-                                <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">No customers found</div>
-                                <div style="font-size: 0.9rem; color: #888;">
-                                    <?php if (!empty($searchQuery)): ?>
-                                    Try a different search term or <a href="reports.php">clear filters</a>
-                                    <?php else: ?>
-                                    <a href="import_customers.php">Import customers</a> to get started
-                                    <?php endif; ?>
+                            <td colspan="10">
+                                <div class="empty-state">
+                                    <div class="es-icon">&#128466;</div>
+                                    <div class="es-title">No customers found</div>
+                                    <div class="es-sub">
+                                        <?php if (!empty($searchQuery)): ?>
+                                        Try a different search term or <a href="reports.php">clear filters</a>
+                                        <?php else: ?>
+                                        <a href="import_customers.php">Import customers</a> to get started
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                         <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Pagination -->
-            <?php if ($totalPages > 1): ?>
-            <div class="pagination">
-                <!-- First Page -->
-                <a href="?<?php echo buildQueryString(['page' => 1]); ?>" 
-                   class="pagination-btn <?php echo $page == 1 ? 'disabled' : ''; ?>">
-                    « First
-                </a>
-                
-                <!-- Previous Page -->
-                <a href="?<?php echo buildQueryString(['page' => max(1, $page - 1)]); ?>" 
-                   class="pagination-btn <?php echo $page == 1 ? 'disabled' : ''; ?>">
-                    ‹ Prev
-                </a>
-                
-                <!-- Page Numbers -->
-                <?php
-                $startPage = max(1, $page - 2);
-                $endPage = min($totalPages, $page + 2);
-                
-                if ($startPage > 1) {
-                    echo '<span class="pagination-btn disabled">...</span>';
-                }
-                
-                for ($i = $startPage; $i <= $endPage; $i++):
-                ?>
-                <a href="?<?php echo buildQueryString(['page' => $i]); ?>" 
-                   class="pagination-btn <?php echo $i == $page ? 'active' : ''; ?>">
-                    <?php echo $i; ?>
-                </a>
-                <?php endfor; 
-                
-                if ($endPage < $totalPages) {
-                    echo '<span class="pagination-btn disabled">...</span>';
-                }
-                ?>
-                
-                <!-- Next Page -->
-                <a href="?<?php echo buildQueryString(['page' => min($totalPages, $page + 1)]); ?>" 
-                   class="pagination-btn <?php echo $page == $totalPages ? 'disabled' : ''; ?>">
-                    Next ›
-                </a>
-                
-                <!-- Last Page -->
-                <a href="?<?php echo buildQueryString(['page' => $totalPages]); ?>" 
-                   class="pagination-btn <?php echo $page == $totalPages ? 'disabled' : ''; ?>">
-                    Last »
-                </a>
-                
-                <span class="pagination-info">
-                    Page <?php echo $page; ?> of <?php echo $totalPages; ?>
-                </span>
-            </div>
-            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination inside card -->
+                <?php if ($totalPages > 1): ?>
+                <div style="padding: 14px 22px; border-top: 1px solid #f3f4f6;">
+                    <div class="pagination">
+                        <a href="?<?php echo buildQueryString(['page'=>1]); ?>" class="pg-btn <?php echo $page==1?'disabled':''; ?>">« First</a>
+                        <a href="?<?php echo buildQueryString(['page'=>max(1,$page-1)]); ?>" class="pg-btn <?php echo $page==1?'disabled':''; ?>">‹ Prev</a>
+                        <?php
+                        $sp = max(1,$page-2); $ep = min($totalPages,$page+2);
+                        if ($sp>1) echo '<span class="pg-btn disabled">…</span>';
+                        for ($i=$sp; $i<=$ep; $i++):
+                        ?>
+                        <a href="?<?php echo buildQueryString(['page'=>$i]); ?>" class="pg-btn <?php echo $i==$page?'active':''; ?>"><?php echo $i; ?></a>
+                        <?php endfor;
+                        if ($ep<$totalPages) echo '<span class="pg-btn disabled">…</span>';
+                        ?>
+                        <a href="?<?php echo buildQueryString(['page'=>min($totalPages,$page+1)]); ?>" class="pg-btn <?php echo $page==$totalPages?'disabled':''; ?>">Next ›</a>
+                        <a href="?<?php echo buildQueryString(['page'=>$totalPages]); ?>" class="pg-btn <?php echo $page==$totalPages?'disabled':''; ?>">Last »</a>
+                        <span class="pg-info">Page <?php echo $page; ?> of <?php echo $totalPages; ?></span>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div><!-- /.table-card -->
+
         </main>
     </div>
-    
-    <!-- Customer Details Modal (to be implemented) -->
-    <div id="customerModal" style="display: none;">
-        <!-- Modal content will be loaded via AJAX -->
+
+    <!-- Export loading overlay -->
+    <div id="exportOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:14px; padding:36px 52px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <div class="export-spinner"></div>
+            <div style="margin-top:16px; font-weight:700; color:#1e293b;" id="exportOverlayMsg">Generating report…</div>
+            <div style="font-size:.78rem; color:#64748b; margin-top:4px;">This may take a moment for large datasets</div>
+        </div>
     </div>
-    
+
     <script src="js/script.js"></script>
     <script>
-// ── Export menu toggle ──
-function toggleExportMenu(e) {
-  e.stopPropagation();
-  const menu = document.getElementById('exportMenu');
-  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-}
-document.addEventListener('click', () => {
-  document.getElementById('exportMenu').style.display = 'none';
-});
-
-// ── Build export URL preserving all current filters ──
-function buildExportUrl(format) {
-  const params = new URLSearchParams(window.location.search);
-  params.set('export', format);
-  params.delete('page'); // always export all pages
-  return window.location.pathname + '?' + params.toString();
-}
-
-// ── CSV / Excel export ──
-function exportData(format) {
-  document.getElementById('exportMenu').style.display = 'none';
-  const overlay = document.getElementById('exportOverlay');
-  const msg = document.getElementById('exportOverlayMsg');
-
-  overlay.style.display = 'flex';
-  msg.textContent = 'Generating report file…';
-
-  // Create hidden iframe to trigger download without navigating
-  const url = buildExportUrl(format);
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.src = url;
-  document.body.appendChild(iframe);
-
-  // Hide overlay after a short delay (download starts in background)
-  setTimeout(() => {
-    overlay.style.display = 'none';
-    document.body.removeChild(iframe);
-  }, 3000);
-
-  return false;
-}
-
-// ── Print: inject summary header then trigger print ──
-function printReport() {
-  document.getElementById('exportMenu').style.display = 'none';
-
-  // Build a summary of active filters for the print header
-  const urlParams = new URLSearchParams(window.location.search);
-  const filterParts = [];
-  if (urlParams.get('sector_id'))   filterParts.push('Sector filtered');
-  if (urlParams.get('year'))        filterParts.push('Year: ' + urlParams.get('year'));
-  if (urlParams.get('month'))       filterParts.push('Month: ' + urlParams.get('month'));
-  if (urlParams.get('search'))      filterParts.push('Search: "' + urlParams.get('search') + '"');
-  if (urlParams.get('missed_only') == '1') filterParts.push('Missed payments only');
-
-  // Inject or update print header
-  let ph = document.querySelector('.print-header');
-  if (!ph) {
-    ph = document.createElement('div');
-    ph.className = 'print-header';
-    document.body.prepend(ph);
-  }
-  ph.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; border-bottom:2px solid #1e293b; padding-bottom:12px;">
-      <div>
-        <h1 style="margin:0; font-size:20px; color:#1e293b;">Payment Tracker — Report</h1>
-        <div style="font-size:12px; color:#64748b; margin-top:4px;">
-          Generated: <?php echo date('d M Y, H:i'); ?> &nbsp;|&nbsp;
-          ${filterParts.length ? filterParts.join(' &nbsp;|&nbsp; ') : 'All data (no filters)'}
-        </div>
-      </div>
-      <div style="text-align:right; font-size:11px; color:#94a3b8;">
-        Total customers shown: <?php echo $totalCustomers; ?>
-      </div>
-    </div>`;
-
-  window.print();
-}
-</script>
-    <script>
-        // Build query string helper
-        function buildQueryString(params) {
-            const currentParams = new URLSearchParams(window.location.search);
-            Object.keys(params).forEach(key => {
-                if (params[key] !== undefined && params[key] !== null) {
-                    currentParams.set(key, params[key]);
-                } else {
-                    currentParams.delete(key);
-                }
-            });
-            return currentParams.toString();
-        }
-        
-        // Remove filter
-        function removeFilter(filterName) {
-            const params = new URLSearchParams(window.location.search);
-            params.delete(filterName);
-            params.delete('page'); // Reset to first page
-            window.location.search = params.toString();
-        }
-        
-        // Export functions
-        function exportToCSV() {
-            const table = document.getElementById('customerTable');
-            let csvContent = "data:text/csv;charset=utf-8,";
-            const rows = table.querySelectorAll('tr');
-            
-            rows.forEach(row => {
-                const cols = row.querySelectorAll('th, td');
-                const rowArray = Array.from(cols).map(col => {
-                    let text = col.textContent.trim();
-                    // Remove action buttons and icons
-                    if (col.querySelector('.quick-actions') || col.querySelector('.action-icon')) {
-                        return '';
-                    }
-                    // Remove progress bar from payment rate
-                    if (col.textContent.includes('%')) {
-                        const rateSpan = col.querySelector('span');
-                        if (rateSpan) text = rateSpan.textContent.trim();
-                    }
-                    return `"${text}"`;
-                }).filter(col => col !== '""'); // Remove empty columns
-                csvContent += rowArray.join(",") + "\r\n";
-            });
-            
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `payment_report_${new Date().toISOString().slice(0,10)}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        
-        function exportToExcel() {
-            // For simplicity, we'll just export as CSV with .xls extension
-            exportToCSV(); // You can enhance this with proper Excel export
-        }
-        
-        function printReport() {
-            window.print();
-        }
-        
-        // Toggle export dropdown
-        function toggleExportDropdown() {
-            const dropdown = document.getElementById('exportDropdown');
-            dropdown.classList.toggle('show');
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function closeDropdown(e) {
-                if (!dropdown.contains(e.target) && !e.target.closest('.export-options')) {
-                    dropdown.classList.remove('show');
-                    document.removeEventListener('click', closeDropdown);
-                }
-            });
-        }
-        
-        // Table sorting
-        let currentSortColumn = null;
-        let sortDirection = 'asc';
-        
-        function sortTable(columnIndex) {
-            const table = document.getElementById('customerTable');
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            
-            // Remove previous sort indicators
-            table.querySelectorAll('th').forEach(th => {
-                th.classList.remove('asc', 'desc');
-            });
-            
-            // Set new sort indicator
-            const header = table.querySelectorAll('th')[columnIndex];
-            if (currentSortColumn === columnIndex) {
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                currentSortColumn = columnIndex;
-                sortDirection = 'asc';
-            }
-            
-            header.classList.add(sortDirection);
-            
-            // Sort rows
-            rows.sort((a, b) => {
-                const aText = a.cells[columnIndex].textContent.trim();
-                const bText = b.cells[columnIndex].textContent.trim();
-                
-                // Handle numeric values
-                const aNum = parseFloat(aText.replace(/[^0-9.-]+/g, ''));
-                const bNum = parseFloat(bText.replace(/[^0-9.-]+/g, ''));
-                
-                if (!isNaN(aNum) && !isNaN(bNum)) {
-                    return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
-                }
-                
-                // Handle dates
-                const aDate = Date.parse(aText);
-                const bDate = Date.parse(bText);
-                if (!isNaN(aDate) && !isNaN(bDate)) {
-                    return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
-                }
-                
-                // Handle text
-                return sortDirection === 'asc' 
-                    ? aText.localeCompare(bText)
-                    : bText.localeCompare(aText);
-            });
-            
-            // Reorder rows
-            rows.forEach(row => tbody.appendChild(row));
-        }
-        
-        // Change page size
-        function changePageSize(size) {
-            const params = new URLSearchParams(window.location.search);
-            params.set('limit', size);
-            params.delete('page'); // Reset to first page
-            window.location.search = params.toString();
-        }
-        
-        // Refresh table
-        function refreshTable() {
-            const loading = document.getElementById('tableLoading');
-            loading.classList.add('active');
-            
-            setTimeout(() => {
-                window.location.reload();
-            }, 500);
-        }
-        
-        // Show customer details (AJAX)
-        function showCustomerDetails(customerId) {
-            // Implement AJAX call to load customer details
-            // alert('Customer details feature to be implemented for ID: ' + customerId);
-            window.location.href="customer_profile.php?id="+customerId;
-            // You can implement a modal with customer payment history
-        }
-        
-        // Send reminder
-        function sendReminder(customerId) {
-            if (confirm('Send payment reminder to this customer?')) {
-                // Implement AJAX call to send reminder
-                alert('Reminder sent to customer ID: ' + customerId);
-            }
-        }
-        
-        // Add payment
-        function addPayment(customerId) {
-            // Redirect to import payments with pre-filled customer
-            window.location.href = `import_payments.php?customer_id=${customerId}`;
-        }
-        
-        // Debounced search
-        let searchTimeout;
-        document.getElementById('search').addEventListener('input', function(e) {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                document.getElementById('searchForm').submit();
-            }, 500);
+    // ── Helpers ──
+    function buildQueryString(params) {
+        const p = new URLSearchParams(window.location.search);
+        Object.keys(params).forEach(k => {
+            if (params[k] != null) p.set(k, params[k]); else p.delete(k);
         });
-        
-        // Auto-focus search input
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.getElementById('search');
-            if (searchInput.value === '') {
-                searchInput.focus();
-            }
+        return p.toString();
+    }
+    function removeFilter(name) {
+        const p = new URLSearchParams(window.location.search);
+        p.delete(name); p.delete('page');
+        window.location.search = p.toString();
+    }
+    function changePageSize(size) {
+        const p = new URLSearchParams(window.location.search);
+        p.set('limit', size); p.delete('page');
+        window.location.search = p.toString();
+    }
+    function refreshTable() {
+        window.location.reload();
+    }
+
+    // ── Export menu ──
+    function toggleExportMenu(e) {
+        e.stopPropagation();
+        const m = document.getElementById('exportMenu');
+        m.style.display = m.style.display === 'none' ? 'block' : 'none';
+    }
+    document.addEventListener('click', () => {
+        const m = document.getElementById('exportMenu');
+        if (m) m.style.display = 'none';
+    });
+
+    function exportData(format) {
+        document.getElementById('exportMenu').style.display = 'none';
+        const overlay = document.getElementById('exportOverlay');
+        overlay.style.display = 'flex';
+        document.getElementById('exportOverlayMsg').textContent = 'Generating report file…';
+        const p = new URLSearchParams(window.location.search);
+        p.set('export', format); p.delete('page');
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = window.location.pathname + '?' + p.toString();
+        document.body.appendChild(iframe);
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            document.body.removeChild(iframe);
+        }, 3000);
+        return false;
+    }
+
+    // ── Table sort ──
+    let curSortCol = null, sortDir = 'asc';
+    function sortTable(col) {
+        const table = document.getElementById('customerTable');
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        table.querySelectorAll('th').forEach(th => th.classList.remove('asc','desc'));
+        if (curSortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else { curSortCol = col; sortDir = 'asc'; }
+        table.querySelectorAll('th')[col].classList.add(sortDir);
+        rows.sort((a,b) => {
+            const at = a.cells[col]?.textContent.trim() ?? '';
+            const bt = b.cells[col]?.textContent.trim() ?? '';
+            const an = parseFloat(at.replace(/[^0-9.-]+/g,''));
+            const bn = parseFloat(bt.replace(/[^0-9.-]+/g,''));
+            if (!isNaN(an) && !isNaN(bn)) return sortDir==='asc' ? an-bn : bn-an;
+            const ad = Date.parse(at), bd = Date.parse(bt);
+            if (!isNaN(ad) && !isNaN(bd)) return sortDir==='asc' ? ad-bd : bd-ad;
+            return sortDir==='asc' ? at.localeCompare(bt) : bt.localeCompare(at);
         });
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            // Ctrl+F to focus search
-            if (e.ctrlKey && e.key === 'f') {
-                e.preventDefault();
-                document.getElementById('search').focus();
-            }
-            
-            // Escape to clear search
-            if (e.key === 'Escape' && document.getElementById('search').value) {
-                document.getElementById('search').value = '';
-                document.getElementById('searchForm').submit();
-            }
-        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    // ── Debounced search ──
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => document.getElementById('searchForm').submit(), 500);
+    });
+
+    // ── Auto-submit on filter change ──
+    ['sector_id','year','month','missed_only'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', () => document.getElementById('searchForm').submit());
+    });
+
+    // ── Keyboard shortcuts ──
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey && e.key === 'f') { e.preventDefault(); document.getElementById('search').focus(); }
+        if (e.key === 'Escape' && document.getElementById('search').value) {
+            document.getElementById('search').value = '';
+            document.getElementById('searchForm').submit();
+        }
+    });
     </script>
 </body>
 </html>

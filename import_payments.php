@@ -11,26 +11,21 @@ function toFloat($value) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $sectorId = $_POST['sector_id'] ?? 0;
+    $sectorId  = $_POST['sector_id'] ?? 0;
     $monthYear = $_POST['month_year'] ?? '';
 
-    // Validate inputs
     if (empty($sectorId) || empty($monthYear)) {
         $message = "Please select a sector and payment month";
         $messageType = 'error';
     } else {
-        // Handle file upload
         if (isset($_FILES['payment_file']) && $_FILES['payment_file']['error'] === UPLOAD_ERR_OK) {
             $uploadDir = 'uploads/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-            }
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
             $fileName = uniqid() . '_' . basename($_FILES['payment_file']['name']);
             $filePath = $uploadDir . $fileName;
 
-            // Check file type
-            $fileType = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+            $fileType     = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
             $allowedTypes = ['xls', 'xlsx', 'csv'];
 
             if (!in_array($fileType, $allowedTypes)) {
@@ -41,17 +36,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 try {
                     $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
-                    $worksheet = $spreadsheet->getActiveSheet();
+                    $worksheet   = $spreadsheet->getActiveSheet();
 
                     $successCount = 0;
-                    $errorCount = 0;
-                    $errors = [];
+                    $errorCount   = 0;
                     $updatedCount = 0;
+                    $errors       = [];
 
-                    // Get sector name for display
                     $stmt = $pdo->prepare("SELECT sector_name FROM sectors WHERE id = ?");
                     $stmt->execute([$sectorId]);
-                    $sector = $stmt->fetch();
+                    $sector     = $stmt->fetch();
                     $sectorName = $sector['sector_name'] ?? 'Unknown Sector';
 
                     foreach ($worksheet->getRowIterator(2) as $row) {
@@ -59,81 +53,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $cellIterator->setIterateOnlyExistingCells(false);
 
                         $data = [];
-                        foreach ($cellIterator as $cell) {
-                            $data[] = $cell->getValue();
-                        }
+                        foreach ($cellIterator as $cell) $data[] = $cell->getValue();
 
-                        // Check if we have at least 4 columns and row is not empty
                         if (count($data) >= 4 && !empty(trim($data[0] ?? ''))) {
                             try {
-                                $name = trim($data[0]);
-                                $phone = trim($data[1]);
-                                $occupation = trim($data[2] ?? '');
+                                $name       = trim($data[0]);
+                                $phone      = trim($data[1]);
                                 $paidAmount = toFloat($data[3]);
-
-                                // Validate amount
-                                if ($paidAmount <= 0) {
-                                    throw new Exception("Invalid payment amount");
-                                }
-
-                                // Find customer by phone and sector
-                                $stmt = $pdo->prepare("SELECT id FROM customers WHERE phone = ? AND sector_id = ?");
-                                $stmt->execute([$phone, $sectorId]);
+                                if ($paidAmount <= 0) throw new \Exception("Invalid payment amount");
+                                $stmt = $pdo->prepare("SELECT id,sector_id FROM customers WHERE phone = ? ");
+                                $stmt->execute([$phone]);
                                 $customer = $stmt->fetch();
+                                // if ($customer && $customer['sector_id'] != $sectorId) {
+                                //     throw new \Exception("Customer belongs to a different sector");
+                                //  $errors[] = "Customer belongs to a different sector";
+                                // }
 
                                 if ($customer) {
-                                    // Check if payment already exists for this month
-                                    $checkStmt = $pdo->prepare("SELECT id FROM payments WHERE customer_id = ? AND month_year = ?");
-                                    $checkStmt->execute([$customer['id'], $monthYear]);
-                                    if ($checkStmt->rowCount() > 0) {
-                                        $stmt = $pdo->prepare("UPDATE payments SET paid_amount = ? WHERE customer_id = ? AND month_year = ?");
-                                        $stmt->execute([$paidAmount, $customer['id'], $monthYear]);
+                                    $chk = $pdo->prepare("SELECT id FROM payments WHERE customer_id = ? AND month_year = ?");
+                                    $chk->execute([$customer['id'], $monthYear]);
+                                    if ($chk->rowCount() > 0) {
+                                        $pdo->prepare("UPDATE payments SET paid_amount = ? WHERE customer_id = ? AND month_year = ?")
+                                            ->execute([$paidAmount, $customer['id'], $monthYear]);
                                         $updatedCount++;
                                     } else {
-                                        // OR if you want to use the last day of the selected month:
                                         $paymentDate = date('Y-m-t', strtotime($monthYear . '-01'));
-                                        $stmt = $pdo->prepare("INSERT INTO payments (customer_id, month_year, paid_amount, payment_date) VALUES (?, ?, ?, ?)");
-                                        $stmt->execute([$customer['id'], $monthYear, $paidAmount, $paymentDate]);
+                                        $pdo->prepare("INSERT INTO payments (customer_id, month_year, paid_amount, payment_date) VALUES (?, ?, ?, ?)")
+                                            ->execute([$customer['id'], $monthYear, $paidAmount, $paymentDate]);
                                     }
-
                                     $successCount++;
                                 } else {
                                     $errorCount++;
-                                    $errors[] = "Row " . $row->getRowIndex() . ": Customer with phone '{$phone}' not found in '{$sectorName}'";
+                                    $errors[] = "Row " . $row->getRowIndex() . ": Phone '{$phone}' not found in '{$sectorName}'";
                                 }
-                            } catch (Exception $e) {
+                            } catch (\Exception $e) {
                                 $errorCount++;
                                 $errors[] = "Row " . $row->getRowIndex() . ": " . $e->getMessage();
                             }
                         }
                     }
 
-                    // Prepare success message
-                    $message = "Import completed for {$monthYear} in '{$sectorName}'<br>";
-                    $message .= "<strong>{$successCount}</strong> payments processed successfully";
-
-                    if ($updatedCount > 0) {
-                        $message .= " ({$updatedCount} updated)";
-                    }
-
+                    $message = "Import completed for {$monthYear} in '{$sectorName}' — "
+                             . "<strong>{$successCount}</strong> payments processed";
+                    if ($updatedCount > 0) $message .= " ({$updatedCount} updated)";
                     if ($errorCount > 0) {
-                        $message .= ", <strong>{$errorCount}</strong> records failed";
+                        $message .= ", <strong>{$errorCount}</strong> failed";
                         $messageType = 'warning';
-
-                        // Show first 5 errors in message
-                        $message .= "<br><br><strong>Some errors:</strong><br>";
-                        $message .= implode("<br>", array_slice($errors, 0, 5));
-                        if (count($errors) > 5) {
-                            $message .= "<br>... and " . (count($errors) - 5) . " more errors";
-                        }
+                        $message .= "<br><br><strong>Errors:</strong><br>" . implode("<br>", array_slice($errors, 0, 5));
+                        if (count($errors) > 5) $message .= "<br>… and " . (count($errors) - 5) . " more";
                     } else {
                         $messageType = 'success';
                     }
 
-                    // Clean up uploaded file
-                    if (file_exists($filePath)) {
-                        unlink($filePath);
-                    }
+                    if (file_exists($filePath)) unlink($filePath);
+
                 } catch (Exception $e) {
                     $message = "Error processing file: " . $e->getMessage();
                     $messageType = 'error';
@@ -144,638 +117,637 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } else {
             $uploadError = $_FILES['payment_file']['error'] ?? 0;
-            $errorMessages = [
-                UPLOAD_ERR_INI_SIZE => 'File size exceeds server limit',
-                UPLOAD_ERR_FORM_SIZE => 'File size exceeds form limit',
-                UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
-                UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+            $errMap = [
+                UPLOAD_ERR_INI_SIZE   => 'File size exceeds server limit',
+                UPLOAD_ERR_FORM_SIZE  => 'File size exceeds form limit',
+                UPLOAD_ERR_PARTIAL    => 'File was only partially uploaded',
+                UPLOAD_ERR_NO_FILE    => 'No file was uploaded',
                 UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
                 UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
-                UPLOAD_ERR_EXTENSION => 'File upload stopped by extension'
+                UPLOAD_ERR_EXTENSION  => 'File upload stopped by extension',
             ];
-
-            $message = $errorMessages[$uploadError] ?? 'Please select a file to upload';
+            $message = $errMap[$uploadError] ?? 'Please select a file to upload';
             $messageType = 'error';
         }
     }
 }
 
-// Get existing sectors
-$sectors = $pdo->query("SELECT * FROM sectors ORDER BY sector_name")->fetchAll();
-
-// Get recent payment months for suggestion
+$sectors      = $pdo->query("SELECT * FROM sectors ORDER BY sector_name")->fetchAll();
 $recentMonths = $pdo->query("SELECT DISTINCT month_year FROM payments ORDER BY month_year DESC LIMIT 6")->fetchAll(PDO::FETCH_COLUMN);
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Import Payments - Payment Tracker</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Loading Overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: none;
-            justify-content: center;
+        /* Page header */
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.75rem 2rem;
+            margin-bottom: 2rem;
+            display: flex;
             align-items: center;
-            z-index: 9999;
+            gap: 1.25rem;
         }
-
-        .loading-overlay.active {
+        .page-header-icon {
+            font-size: 2.2rem;
+            background: rgba(255,255,255,.15);
+            width: 64px;
+            height: 64px;
+            border-radius: 14px;
             display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .page-header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .25rem; }
+        .page-header p  { font-size: .9rem; opacity: .85; margin: 0; }
+
+        /* Two-column layout */
+        .import-layout {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 1.5rem;
+            align-items: start;
         }
 
-        .loading-content {
+        /* Cards */
+        .card {
             background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1.5rem;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .loading-text {
-            font-size: 1.1rem;
-            color: #333;
-            margin-bottom: 0.5rem;
-        }
-
-        .loading-details {
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        /* Progress bar */
-        .progress-container {
-            margin-top: 1rem;
-            width: 100%;
-            background: #f0f0f0;
-            border-radius: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.07);
             overflow: hidden;
+            margin-bottom: 1.5rem;
         }
-
-        .progress-bar {
-            height: 10px;
-            background: #667eea;
-            width: 0%;
-            transition: width 0.3s ease;
-            border-radius: 10px;
-        }
-
-        /* Form enhancements */
-        .sector-info {
-            background: #f8f9fa;
-            padding: 0.75rem;
-            border-radius: 5px;
-            margin-top: 0.5rem;
-            display: none;
-        }
-
-        .sector-info.active {
-            display: block;
-        }
-
-        .month-suggestions {
+        .card:last-child { margin-bottom: 0; }
+        .card-header {
+            padding: 1.2rem 1.75rem;
+            border-bottom: 2px solid #f0f0f0;
             display: flex;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-            flex-wrap: wrap;
+            align-items: center;
+            gap: .6rem;
         }
+        .card-header::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 18px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        .card-header h2 { font-size: 1rem; font-weight: 700; color: #333; margin: 0; }
+        .card-body { padding: 1.75rem; }
 
+        /* Flash */
+        .flash {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: .9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: flex-start;
+            gap: .6rem;
+            line-height: 1.6;
+        }
+        .flash.success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+        .flash.error   { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
+        .flash.warning { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; }
+        .flash-icon { flex-shrink: 0; margin-top: .1rem; }
+
+        /* Field */
+        .field-label {
+            display: block;
+            font-size: .875rem;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: .4rem;
+        }
+        .field-input {
+            width: 100%;
+            padding: .7rem 1rem;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: .95rem;
+            font-family: inherit;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .field-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,.12);
+        }
+        .field-group { margin-bottom: 1.25rem; }
+
+        /* Sector info box */
+        .sector-info-box {
+            display: none;
+            margin-top: .65rem;
+            background: #f0f2ff;
+            border: 1px solid #d0d5f0;
+            border-radius: 8px;
+            padding: .75rem 1rem;
+            animation: fadeIn .2s ease;
+        }
+        .sector-info-box.active { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+        .sib-stat { text-align: center; }
+        .sib-val  { font-size: 1.3rem; font-weight: 700; color: #667eea; line-height: 1; }
+        .sib-lbl  { font-size: .72rem; color: #888; margin-top: .2rem; text-transform: uppercase; letter-spacing: .4px; }
+
+        /* Month chips */
+        .month-chips {
+            display: flex;
+            gap: .4rem;
+            flex-wrap: wrap;
+            margin-top: .5rem;
+        }
         .month-chip {
             background: #e9ecef;
-            padding: 0.25rem 0.75rem;
+            color: #555;
+            padding: .25rem .7rem;
             border-radius: 20px;
-            font-size: 0.875rem;
+            font-size: .78rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all .2s;
+            border: none;
+        }
+        .month-chip:hover { background: #667eea; color: white; }
+
+        /* File upload zone */
+        .upload-zone {
+            border: 2px dashed #d0d5e8;
+            border-radius: 10px;
+            padding: 1.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all .2s;
+            background: #fafbff;
+            position: relative;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        .upload-icon   { font-size: 1.8rem; margin-bottom: .4rem; }
+        .upload-title  { font-weight: 600; color: #333; font-size: .95rem; margin-bottom: .2rem; }
+        .upload-sub    { font-size: .8rem; color: #999; }
+        .upload-fmts   { display: flex; gap: .4rem; justify-content: center; margin-top: .6rem; }
+        .fmt-badge {
+            background: #e9ecef;
+            color: #666;
+            font-size: .7rem;
+            font-weight: 700;
+            padding: .15rem .45rem;
+            border-radius: 4px;
+            text-transform: uppercase;
         }
 
-        .month-chip:hover {
-            background: #667eea;
-            color: white;
-        }
-
-        .file-preview {
-            margin-top: 1rem;
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 5px;
+        .file-selected {
             display: none;
+            align-items: center;
+            gap: .75rem;
+            background: #f0f2ff;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: .85rem 1.1rem;
+            margin-top: .65rem;
         }
-
-        .file-preview.active {
-            display: block;
+        .file-selected.active { display: flex; }
+        .fs-icon { font-size: 1.4rem; }
+        .fs-name { font-weight: 600; color: #333; font-size: .875rem; word-break: break-all; }
+        .fs-size { font-size: .75rem; color: #888; }
+        .fs-remove {
+            margin-left: auto;
+            background: none;
+            border: 1.5px solid #ddd;
+            border-radius: 6px;
+            padding: .3rem .6rem;
+            font-size: .75rem;
+            cursor: pointer;
+            color: #888;
+            flex-shrink: 0;
         }
+        .fs-remove:hover { border-color: #dc3545; color: #dc3545; }
 
-        .preview-info {
+        /* No sectors */
+        .no-sectors-warn {
+            background: #fff3cd; color: #856404;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: .75rem 1rem;
+            font-size: .85rem;
+            margin-top: .65rem;
+        }
+        .no-sectors-warn a { color: #856404; font-weight: 600; }
+
+        /* Submit */
+        .btn-import {
+            width: 100%;
+            padding: .85rem;
+            border: none;
+            border-radius: 9px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity .2s, transform .2s;
+            margin-top: 1.5rem;
             display: flex;
             align-items: center;
-            gap: 1rem;
+            justify-content: center;
+            gap: .5rem;
+        }
+        .btn-import:hover   { opacity: .9; transform: translateY(-1px); }
+        .btn-import:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+        /* Right column */
+        .right-col { display: flex; flex-direction: column; gap: 0; }
+
+        .col-preview { display: flex; flex-direction: column; gap: .4rem; margin: .75rem 0; }
+        .col-row {
+            display: flex; align-items: center; gap: .7rem;
+            padding: .5rem .75rem; background: #f8f9fa; border-radius: 7px;
+        }
+        .col-num {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: #667eea; color: white;
+            font-size: .7rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .col-name { font-weight: 600; font-size: .85rem; color: #333; flex: 1; }
+        .col-req { font-size: .7rem; font-weight: 700; padding: .15rem .45rem; border-radius: 4px; }
+        .col-req.required { background: #f8d7da; color: #721c24; }
+        .col-req.optional { background: #e2e8f0; color: #666; }
+
+        .notes-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .5rem; }
+        .notes-list li { display: flex; gap: .6rem; font-size: .83rem; color: #666; line-height: 1.45; }
+        .notes-list li::before { content: '•'; color: #667eea; font-weight: 700; flex-shrink: 0; }
+
+        .btn-download {
+            display: flex; align-items: center; justify-content: center; gap: .5rem;
+            width: 100%; padding: .7rem; border: 1.5px solid #667eea; border-radius: 8px;
+            color: #667eea; font-weight: 600; font-size: .875rem;
+            text-decoration: none; cursor: pointer; background: white;
+            transition: all .2s; margin-top: 1rem;
+        }
+        .btn-download:hover { background: #667eea; color: white; }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.55);
+            display: none; align-items: center; justify-content: center;
+            z-index: 9999;
+        }
+        .loading-overlay.active { display: flex; }
+        .loading-box {
+            background: white; border-radius: 14px;
+            padding: 2.25rem 2rem; text-align: center;
+            max-width: 360px; width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,.25);
+            animation: popIn .25s ease;
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(.93); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        .spinner {
+            width: 52px; height: 52px;
+            border: 5px solid #f0f0f0; border-top-color: #667eea;
+            border-radius: 50%; animation: spin 1s linear infinite;
+            margin: 0 auto 1.25rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-title  { font-size: 1.05rem; font-weight: 700; color: #333; margin-bottom: .35rem; }
+        .loading-detail { font-size: .85rem; color: #888; margin-bottom: 1rem; }
+        .progress-track { height: 8px; background: #f0f0f0; border-radius: 10px; overflow: hidden; }
+        .progress-fill  {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 10px; transition: width .3s ease;
         }
 
-        .file-icon {
-            font-size: 2rem;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .file-details {
-            flex: 1;
-        }
-
-        .file-name {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .file-size {
-            color: #666;
-            font-size: 0.875rem;
-        }
-
-        .form-disabled {
-            opacity: 0.7;
-            pointer-events: none;
-        }
-
-        /* Stats preview */
-        .stats-preview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        .stat-item {
-            background: white;
-            padding: 1rem;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            font-size: 0.875rem;
-            color: #666;
-        }
+        @media (max-width: 900px) { .import-layout { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { .page-header { flex-direction: column; text-align: center; } }
     </style>
 </head>
-
 <body>
     <nav class="navbar">
         <div class="nav-brand">Payment Tracker</div>
-        <div class="nav-user">Welcome, <?php echo $_SESSION['username']; ?></div>
-        <a href="dashboard.php" class="back-btn">Back to Dashboard</a>
+        <div class="nav-user">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></div>
+        <a href="#" onclick="history.go(-1); return false;" class="back-btn">← Back</a>
     </nav>
 
     <div class="container">
         <?php include 'includes/sidebar.php'; ?>
 
         <main class="main-content">
-            <h1>Import Monthly Payments</h1>
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="page-header-icon">💰</div>
+                <div>
+                    <h1>Import Monthly Payments</h1>
+                    <p>Upload an Excel or CSV file to bulk-record payments for a sector</p>
+                </div>
+            </div>
 
             <?php if ($message): ?>
-                <div class="message <?php echo $messageType; ?>">
-                    <?php echo $message; ?>
-                </div>
+            <div class="flash <?php echo htmlspecialchars($messageType); ?>">
+                <span class="flash-icon">
+                    <?php if ($messageType === 'success') echo '✓';
+                          elseif ($messageType === 'error') echo '✕';
+                          else echo '⚠'; ?>
+                </span>
+                <div><?php echo $message; ?></div>
+            </div>
             <?php endif; ?>
 
-            <div class="import-form" id="importFormContainer">
-                <form method="POST" enctype="multipart/form-data" id="paymentForm">
-                    <div class="form-group">
-                        <label for="sector_id">Select Sector *</label>
-                        <select id="sector_id" name="sector_id" required onchange="updateSectorInfo()">
-                            <option value="">-- Select Sector --</option>
-                            <?php foreach ($sectors as $sector): ?>
-                                <option value="<?php echo $sector['id']; ?>">
-                                    <?php echo htmlspecialchars($sector['sector_name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="sector-info" id="sectorInfo">
-                            <!-- Sector info will be loaded here -->
-                        </div>
-                        <?php if (empty($sectors)): ?>
-                            <div class="message warning" style="margin-top: 0.5rem;">
-                                No sectors found. Please <a href="import_customers.php">import customers</a> or <a href="sectors.php">create sectors</a> first.
-                            </div>
-                        <?php endif; ?>
-                    </div>
+            <div class="import-layout">
 
-                    <div class="form-group">
-                        <label for="month_year">Payment Month *</label>
-                        <input type="month" id="month_year" name="month_year" required
-                            min="2020-01" max="<?php echo date('Y-m'); ?>">
+                <!-- Form -->
+                <div>
+                    <div class="card">
+                        <div class="card-header"><h2>Upload File</h2></div>
+                        <div class="card-body">
+                            <form method="POST" enctype="multipart/form-data" id="paymentForm">
 
-                        <?php if (!empty($recentMonths)): ?>
-                            <div class="month-suggestions">
-                                <small>Recent months:</small>
-                                <?php foreach ($recentMonths as $month): ?>
-                                    <span class="month-chip" onclick="document.getElementById('month_year').value='<?php echo $month; ?>'">
-                                        <?php echo $month; ?>
-                                    </span>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="payment_file">Excel/CSV File *</label>
-                        <input type="file" id="payment_file" name="payment_file"
-                            accept=".xls,.xlsx,.csv" required>
-                        <small>
-                            Supported formats: .xls, .xlsx, .csv<br>
-                            Required columns: Name, Phone, Occupation, Paid Amount<br>
-                            Max file size: 10MB
-                        </small>
-                        <div class="file-preview" id="filePreview">
-                            <div class="preview-info">
-                                <div class="file-icon">📄</div>
-                                <div class="file-details">
-                                    <div class="file-name" id="fileName"></div>
-                                    <div class="file-size" id="fileSize"></div>
+                                <!-- Sector -->
+                                <div class="field-group">
+                                    <label class="field-label" for="sector_id">
+                                        Sector <span style="color:#dc3545;">*</span>
+                                    </label>
+                                    <select id="sector_id" name="sector_id" class="field-input"
+                                            required onchange="loadSectorInfo()">
+                                        <option value="">-- Select Sector --</option>
+                                        <?php foreach ($sectors as $s): ?>
+                                        <option value="<?php echo $s['id']; ?>">
+                                            <?php echo htmlspecialchars($s['sector_name']); ?>
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <?php if (empty($sectors)): ?>
+                                    <div class="no-sectors-warn">
+                                        No sectors found. <a href="import_customers.php">Import customers</a>
+                                        or <a href="sectors.php">create sectors</a> first.
+                                    </div>
+                                    <?php endif; ?>
+                                    <div class="sector-info-box" id="sectorInfoBox">
+                                        <div class="sib-stat">
+                                            <div class="sib-val" id="sibCustomers">—</div>
+                                            <div class="sib-lbl">Customers</div>
+                                        </div>
+                                        <div class="sib-stat">
+                                            <div class="sib-val" id="sibPayments">—</div>
+                                            <div class="sib-lbl">Total Payments</div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <button type="button" class="btn btn-secondary btn-sm" onclick="clearFile()">Remove</button>
-                            </div>
+
+                                <!-- Month -->
+                                <div class="field-group">
+                                    <label class="field-label" for="month_year">
+                                        Payment Month <span style="color:#dc3545;">*</span>
+                                    </label>
+                                    <input type="month" id="month_year" name="month_year"
+                                           class="field-input" required
+                                           min="2020-01" max="<?php echo date('Y-m'); ?>">
+                                    <?php if (!empty($recentMonths)): ?>
+                                    <div class="month-chips">
+                                        <?php foreach ($recentMonths as $m): ?>
+                                        <button type="button" class="month-chip"
+                                                onclick="document.getElementById('month_year').value='<?php echo $m; ?>'">
+                                            <?php echo date('M Y', strtotime($m . '-01')); ?>
+                                        </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <!-- File -->
+                                <div class="field-group">
+                                    <label class="field-label">
+                                        Excel / CSV File <span style="color:#dc3545;">*</span>
+                                    </label>
+                                    <div class="upload-zone" id="uploadZone">
+                                        <input type="file" id="payment_file" name="payment_file"
+                                               accept=".xls,.xlsx,.csv" required>
+                                        <div class="upload-icon">📂</div>
+                                        <div class="upload-title">Click to browse or drag & drop</div>
+                                        <div class="upload-sub">Maximum file size: 10 MB</div>
+                                        <div class="upload-fmts">
+                                            <span class="fmt-badge">xls</span>
+                                            <span class="fmt-badge">xlsx</span>
+                                            <span class="fmt-badge">csv</span>
+                                        </div>
+                                    </div>
+                                    <div class="file-selected" id="fileSelected">
+                                        <span class="fs-icon">📄</span>
+                                        <div>
+                                            <div class="fs-name" id="fsName"></div>
+                                            <div class="fs-size" id="fsSize"></div>
+                                        </div>
+                                        <button type="button" class="fs-remove" onclick="clearFile()">✕ Remove</button>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn-import" id="submitBtn">
+                                    💰 Import Payments
+                                </button>
+
+                            </form>
                         </div>
-                    </div>
-
-                    <!-- Stats Preview -->
-                    <div class="stats-preview" id="statsPreview" style="display: none;">
-                        <div class="stat-item">
-                            <div class="stat-value" id="customerCount">0</div>
-                            <div class="stat-label">Customers in Sector</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="existingPayments">0</div>
-                            <div class="stat-label">Existing Payments</div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary" id="submitBtn">
-                                <span class="btn-icon">💰</span>
-                                Import Payments
-                            </button>
-                            <button type="reset" class="btn btn-secondary" onclick="resetForm()">Reset Form</button>
-                        </div>
-                    </div>
-                </form>
-
-                <div class="template-section">
-                    <h3>Excel/CSV Template Format</h3>
-                    <p>Download the template below and fill in your payment data:</p>
-
-                    <table class="template-table">
-                        <thead>
-                            <tr>
-                                <th>Name *</th>
-                                <th>Phone *</th>
-                                <th>Occupation</th>
-                                <th>Paid Amount *</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>John Doe</td>
-                                <td>1234567890</td>
-                                <td>Engineer</td>
-                                <td>500.00</td>
-                            </tr>
-                            <tr>
-                                <td>Jane Smith</td>
-                                <td>0987654321</td>
-                                <td>Teacher</td>
-                                <td>300.00</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <div class="template-actions">
-                        <a href="#" class="btn-download" onclick="downloadPaymentTemplate()">
-                            <span class="btn-icon">📄</span>
-                            Download Payment Template
-                        </a>
-                        <a href="reports.php" class="btn-secondary">
-                            <span class="btn-icon">📊</span>
-                            View Payment Reports
-                        </a>
-                    </div>
-
-                    <div class="template-notes">
-                        <h4>Important Notes:</h4>
-                        <ul>
-                            <li>First row must contain column headers</li>
-                            <li>Phone numbers must match existing customers in the selected sector</li>
-                            <li>If a payment already exists for the month, it will be updated</li>
-                            <li>Amount must be positive decimal number (e.g., 500.00)</li>
-                            <li>Maximum file size: 10MB</li>
-                            <li>Processing may take a few moments for large files</li>
-                        </ul>
                     </div>
                 </div>
+
+                <!-- Right column -->
+                <div class="right-col">
+
+                    <div class="card">
+                        <div class="card-header"><h2>Required Columns</h2></div>
+                        <div class="card-body">
+                            <p style="font-size:.85rem;color:#666;margin-bottom:.25rem;">
+                                First row must be headers. Columns in this order:
+                            </p>
+                            <div class="col-preview">
+                                <div class="col-row">
+                                    <div class="col-num">A</div>
+                                    <div class="col-name">Name</div>
+                                    <span class="col-req required">Required</span>
+                                </div>
+                                <div class="col-row">
+                                    <div class="col-num">B</div>
+                                    <div class="col-name">Phone</div>
+                                    <span class="col-req required">Required</span>
+                                </div>
+                                <div class="col-row">
+                                    <div class="col-num">C</div>
+                                    <div class="col-name">Occupation</div>
+                                    <span class="col-req optional">Optional</span>
+                                </div>
+                                <div class="col-row">
+                                    <div class="col-num">D</div>
+                                    <div class="col-name">Paid Amount</div>
+                                    <span class="col-req required">Required</span>
+                                </div>
+                            </div>
+                            <a href="#" class="btn-download" onclick="downloadTemplate(); return false;">
+                                ⬇ Download CSV Template
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top:1.5rem;">
+                        <div class="card-header"><h2>Important Notes</h2></div>
+                        <div class="card-body">
+                            <ul class="notes-list">
+                                <li>Phone numbers must match existing customers in the selected sector.</li>
+                                <li>If a payment already exists for the selected month it will be updated.</li>
+                                <li>Paid amount must be a positive number (e.g. 500.00).</li>
+                                <li>Rows with an unrecognised phone number will be skipped and counted as errors.</li>
+                                <li>Maximum file size is 10 MB.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
         </main>
     </div>
 
-    <!-- Loading Overlay -->
+    <!-- Loading overlay -->
     <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">Importing Payments...</div>
-            <div class="loading-details" id="loadingDetails">Please wait while we process your file</div>
-            <div class="progress-container">
-                <div class="progress-bar" id="progressBar"></div>
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <div class="loading-title">Importing Payments…</div>
+            <div class="loading-detail" id="loadingDetail">Please wait while we process your file</div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // DOM Elements
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingDetails = document.getElementById('loadingDetails');
-        const progressBar = document.getElementById('progressBar');
-        const submitBtn = document.getElementById('submitBtn');
-        const importForm = document.getElementById('importFormContainer');
-        const paymentForm = document.getElementById('paymentForm');
-        const fileInput = document.getElementById('payment_file');
-        const filePreview = document.getElementById('filePreview');
-        const fileName = document.getElementById('fileName');
-        const fileSize = document.getElementById('fileSize');
-        const statsPreview = document.getElementById('statsPreview');
-        const customerCountElem = document.getElementById('customerCount');
-        const existingPaymentsElem = document.getElementById('existingPayments');
-
-        // Format file size
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        // File input change handler
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                // Show preview
-                fileName.textContent = file.name;
-                fileSize.textContent = formatFileSize(file.size);
-                filePreview.classList.add('active');
-
-                // Validate file
-                validateFile(file);
-            } else {
-                filePreview.classList.remove('active');
-            }
-        });
-
-        // Validate file
-        function validateFile(file) {
-            const maxSize = 10 * 1024 * 1024; // 10MB
-            const validExtensions = ['.xls', '.xlsx', '.csv'];
-            const fileName = file.name.toLowerCase();
-
-            let isValid = true;
-            let errorMessage = '';
-
-            // Check file size
-            if (file.size > maxSize) {
-                errorMessage = 'File size exceeds 10MB limit';
-                isValid = false;
-            }
-
-            // Check file extension
-            const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
-            if (!hasValidExtension) {
-                errorMessage = 'Please upload only Excel (.xls, .xlsx) or CSV files';
-                isValid = false;
-            }
-
-            if (!isValid) {
-                alert(errorMessage);
-                clearFile();
-                return false;
-            }
-
-            return true;
-        }
-
-        // Clear file input
-        function clearFile() {
-            fileInput.value = '';
-            filePreview.classList.remove('active');
-        }
-
-        // Reset form
-        function resetForm() {
-            clearFile();
-            statsPreview.style.display = 'none';
-            document.getElementById('sectorInfo').classList.remove('active');
-            document.getElementById('sectorInfo').innerHTML = '';
-        }
-
-        // Update sector info
-        function updateSectorInfo() {
-            const sectorId = document.getElementById('sector_id').value;
-            const sectorInfo = document.getElementById('sectorInfo');
-
-            if (sectorId) {
-                // Show loading in sector info
-                sectorInfo.innerHTML = 'Loading sector information...';
-                sectorInfo.classList.add('active');
-
-                // Fetch sector details via AJAX
-                fetch(`get_sector_info.php?sector_id=${sectorId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            sectorInfo.innerHTML = `
-                                <strong>${data.sector_name}</strong><br>
-                                <small>${data.customer_count} customers, ${data.total_payments} total payments</small>
-                            `;
-
-                            // Update stats preview
-                            customerCountElem.textContent = data.customer_count;
-                            existingPaymentsElem.textContent = data.total_payments;
-                            statsPreview.style.display = 'grid';
-                        }
-                    })
-                    .catch(error => {
-                        sectorInfo.innerHTML = '<small style="color:#dc3545">Error loading sector information</small>';
-                    });
-            } else {
-                sectorInfo.classList.remove('active');
-                sectorInfo.innerHTML = '';
-                statsPreview.style.display = 'none';
-            }
-        }
-
-        // Download payment template
-        function downloadPaymentTemplate() {
-            const template = `Name,Phone,Occupation,Paid Amount
-John Doe,1234567890,Engineer,500.00
-Jane Smith,0987654321,Teacher,300.00
-Michael Brown,5551234567,Doctor,700.00
-Sarah Johnson,4449876543,Lawyer,600.00`;
-
-            const blob = new Blob([template], {
-                type: 'text/csv'
-            });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'payment_template.csv';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        }
-
-        // Simulate progress for large files
-        function simulateProgress() {
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += Math.random() * 10;
-                if (progress > 90) progress = 90; // Cap at 90% until actual completion
-                progressBar.style.width = progress + '%';
-
-                // Update loading details
-                const details = [
-                    "Reading Excel file...",
-                    "Validating data...",
-                    "Processing payments...",
-                    "Updating database...",
-                    "Finalizing import..."
-                ];
-                const detailIndex = Math.floor(progress / 20);
-                if (detailIndex < details.length) {
-                    loadingDetails.textContent = details[detailIndex];
-                }
-            }, 500);
-
-            return interval;
-        }
-
-        // Form submission handler
-        paymentForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            // Validate form
-            const sectorId = document.getElementById('sector_id').value;
-            const monthYear = document.getElementById('month_year').value;
-            const file = fileInput.files[0];
-
-            if (!sectorId) {
-                alert('Please select a sector');
-                return;
-            }
-
-            if (!monthYear) {
-                alert('Please select a payment month');
-                return;
-            }
-
-            if (!file) {
-                alert('Please select a file to upload');
-                return;
-            }
-
-            // Validate file
-            if (!validateFile(file)) {
-                return;
-            }
-
-            // Show loading overlay
-            loadingOverlay.classList.add('active');
-            importForm.classList.add('form-disabled');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="btn-icon">⏳</span> Importing...';
-
-            // Start progress simulation
-            const progressInterval = simulateProgress();
-
-            // Create FormData for file upload
-            const formData = new FormData(this);
-
-            // Submit form via AJAX for better UX
-            fetch('import_payments.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.text())
-                .then(html => {
-                    // Parse the HTML response to extract the message
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const messageDiv = doc.querySelector('.message');
-
-                    // Complete progress bar
-                    clearInterval(progressInterval);
-                    progressBar.style.width = '100%';
-                    loadingDetails.textContent = 'Import complete!';
-
-                    // Wait a moment then reload page
-                    setTimeout(() => {
-                        loadingOverlay.classList.remove('active');
-                        window.location.reload();
-                    }, 1500);
-                })
-                .catch(error => {
-                    clearInterval(progressInterval);
-                    loadingOverlay.classList.remove('active');
-                    importForm.classList.remove('form-disabled');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<span class="btn-icon">💰</span> Import Payments';
-                    alert('Error during import: ' + error.message);
-                });
-        });
-
-        // Initialize date to current month
+        // Set month to current on load
         document.addEventListener('DOMContentLoaded', function() {
-            const now = new Date();
-            const currentMonth = now.toISOString().slice(0, 7);
-            document.getElementById('month_year').value = currentMonth;
-            document.getElementById('month_year').max = currentMonth;
+            const cur = new Date().toISOString().slice(0, 7);
+            document.getElementById('month_year').value = cur;
+            document.getElementById('month_year').max   = cur;
         });
+
+        // Sector info
+        function loadSectorInfo() {
+            const id  = document.getElementById('sector_id').value;
+            const box = document.getElementById('sectorInfoBox');
+            if (!id) { box.classList.remove('active'); return; }
+
+            fetch(`get_sector_info.php?sector_id=${id}`)
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) {
+                        document.getElementById('sibCustomers').textContent = d.customer_count;
+                        document.getElementById('sibPayments').textContent  = d.total_payments;
+                        box.classList.add('active');
+                    }
+                })
+                .catch(() => box.classList.remove('active'));
+        }
+
+        // File input
+        document.getElementById('payment_file').addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size exceeds 10 MB limit.');
+                this.value = ''; return;
+            }
+            const valid = ['.xls','.xlsx','.csv'].some(e => file.name.toLowerCase().endsWith(e));
+            if (!valid) {
+                alert('Please upload only Excel (.xls, .xlsx) or CSV files.');
+                this.value = ''; return;
+            }
+
+            document.getElementById('fsName').textContent = file.name;
+            document.getElementById('fsSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+            document.getElementById('fileSelected').classList.add('active');
+        });
+
+        function clearFile() {
+            document.getElementById('payment_file').value = '';
+            document.getElementById('fileSelected').classList.remove('active');
+        }
+
+        // Drag style
+        const zone = document.getElementById('uploadZone');
+        zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('dragover'); });
+        zone.addEventListener('dragleave', ()  => zone.classList.remove('dragover'));
+        zone.addEventListener('drop',      e  => { e.preventDefault(); zone.classList.remove('dragover'); });
+
+        // Submit with loading overlay
+        document.getElementById('paymentForm').addEventListener('submit', function(e) {
+            const sector = document.getElementById('sector_id').value;
+            const month  = document.getElementById('month_year').value;
+            const file   = document.getElementById('payment_file').files[0];
+
+            if (!sector) { alert('Please select a sector.'); e.preventDefault(); return; }
+            if (!month)  { alert('Please select a payment month.'); e.preventDefault(); return; }
+            if (!file)   { alert('Please select a file to upload.'); e.preventDefault(); return; }
+
+            const overlay = document.getElementById('loadingOverlay');
+            const detail  = document.getElementById('loadingDetail');
+            const fill    = document.getElementById('progressFill');
+            const btn     = document.getElementById('submitBtn');
+
+            overlay.classList.add('active');
+            btn.disabled = true;
+            btn.textContent = '⏳ Importing…';
+
+            const steps = ['Reading file…','Validating data…','Processing payments…','Updating database…','Finalising…'];
+            let progress = 0;
+            const iv = setInterval(() => {
+                progress += Math.random() * 12;
+                if (progress > 90) progress = 90;
+                fill.style.width = progress + '%';
+                detail.textContent = steps[Math.min(Math.floor(progress / 20), steps.length - 1)];
+            }, 400);
+
+            // Let the form submit normally; overlay stays until page reloads
+            setTimeout(() => clearInterval(iv), 30000);
+        });
+
+        // Download template
+        function downloadTemplate() {
+            const csv = `Name,Phone,Occupation,Paid Amount\nJohn Doe,1234567890,Engineer,500.00\nJane Smith,0987654321,Teacher,300.00\nMichael Brown,5551234567,Doctor,700.00\nSarah Johnson,4449876543,Lawyer,600.00`;
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url; a.download = 'payment_template.csv';
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
     </script>
 </body>
-
 </html>

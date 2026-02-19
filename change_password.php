@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <nav class="navbar">
         <div class="nav-brand">Payment Tracker</div>
         <div class="nav-user">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></div>
-        <a href="logout.php" class="logout-btn">Logout</a>
+        <a href="#" onclick="history.go(-1); return false;" class="back-btn">← Back</a>
     </nav>
 
     <div class="container">
